@@ -20,7 +20,7 @@ export class QuranService {
     try {
       const skip = (page - 1) * limit;
       
-      const chapters = await (this.prisma as any).quranChapter.findMany({
+      const chaptersRaw = await (this.prisma as any).quranChapter.findMany({
         skip,
         take: limit,
         orderBy: { chapterNumber: 'asc' },
@@ -38,26 +38,15 @@ export class QuranService {
         },
       });
 
-      if (chapters.length === 0) {
+      if (chaptersRaw.length === 0) {
         this.logger.warn('No chapters found in database, falling back to upstream API');
         return await this.fallbackToUpstream('chapters', { page, limit });
       }
 
       const total = await (this.prisma as any).quranChapter.count();
+      const chapters = chaptersRaw.map((c: any) => this.mapper.mapChapterToUpstreamFormat(c));
       
-      return {
-        code: 200,
-        status: 'Success',
-        data: {
-          chapters,
-          pagination: {
-            current_page: page,
-            total_pages: Math.ceil(total / limit),
-            total_count: total,
-            per_page: limit,
-          },
-        },
-      };
+      return { chapters, pagination: { current_page: page, total_pages: Math.ceil(total / limit), total_count: total, per_page: limit } } as any;
     } catch (error) {
       this.logger.error(`Failed to get chapters from database: ${error.message}`);
       return await this.fallbackToUpstream('chapters', { page, limit });
@@ -102,7 +91,7 @@ export class QuranService {
     try {
       const skip = (page - 1) * limit;
       
-      const verses = await (this.prisma as any).quranVerse.findMany({
+      const versesRaw = await (this.prisma as any).quranVerse.findMany({
         where: { chapterNumber },
         skip,
         take: limit,
@@ -125,7 +114,7 @@ export class QuranService {
         },
       });
 
-      if (verses.length === 0) {
+      if (versesRaw.length === 0) {
         this.logger.warn(`No verses found for chapter ${chapterNumber} in database, falling back to upstream API`);
         return await this.fallbackToUpstream('verses', { chapterNumber, page, limit });
       }
@@ -133,20 +122,9 @@ export class QuranService {
       const total = await (this.prisma as any).quranVerse.count({
         where: { chapterNumber },
       });
+      const verses = versesRaw.map((v: any) => this.mapper.mapVerseToUpstreamFormat(v));
 
-      return {
-        code: 200,
-        status: 'Success',
-        data: {
-          verses,
-          pagination: {
-            current_page: page,
-            total_pages: Math.ceil(total / limit),
-            total_count: total,
-            per_page: limit,
-          },
-        },
-      };
+      return { verses, pagination: { current_page: page, total_pages: Math.ceil(total / limit), total_count: total, per_page: limit } } as any;
     } catch (error) {
       this.logger.error(`Failed to get verses for chapter ${chapterNumber} from database: ${error.message}`);
       return await this.fallbackToUpstream('verses', { chapterNumber, page, limit });
