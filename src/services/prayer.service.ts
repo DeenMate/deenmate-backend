@@ -180,7 +180,7 @@ export class PrayerService {
       // Cache the response if enabled (shorter TTL for prayer times)
       if (this.cacheEnabled) {
         const ttl = this.getPrayerTimeCacheTTL(date);
-        await this.redisService.set(cacheKey, JSON.stringify(timings));
+        await this.redisService.set(cacheKey, JSON.stringify(timings), ttl);
       }
 
       this.logger.log(`Fetched prayer timings for ${latitude},${longitude} from upstream`);
@@ -249,7 +249,7 @@ export class PrayerService {
       // Cache the response if enabled (shorter TTL for prayer times)
       if (this.cacheEnabled) {
         const ttl = this.getPrayerTimeCacheTTL(date);
-        await this.redisService.set(cacheKey, JSON.stringify(timings));
+        await this.redisService.set(cacheKey, JSON.stringify(timings), ttl);
       }
 
       this.logger.log(`Fetched prayer timings for ${city},${country} from upstream`);

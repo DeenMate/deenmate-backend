@@ -3,8 +3,8 @@ export interface UpstreamCalculationMethod {
   name: string;
   params: {
     Fajr: number;
-    Isha: number;
-    Maghrib?: number;
+    Isha: number | string;
+    Maghrib?: number | string;
     Midnight?: string;
   };
   location: {
@@ -65,9 +65,24 @@ export interface UpstreamDateInfo {
 
 export class PrayerMapper {
   mapCalculationMethodFromUpstream(upstream: UpstreamCalculationMethod) {
-    const fajr = upstream.params?.Fajr ?? 18;
-    const isha = upstream.params?.Isha ?? 18;
-    const maghrib = upstream.params?.Maghrib ?? 0;
+    const fajr = typeof upstream.params?.Fajr === 'number' ? upstream.params.Fajr : 18;
+    // Isha can be an angle (number) or an interval like "90 min"
+    let ishaAngle: number = 18;
+    let ishaInterval: number | null = null;
+    if (typeof upstream.params?.Isha === 'number') {
+      ishaAngle = upstream.params.Isha;
+    } else if (typeof upstream.params?.Isha === 'string') {
+      const match = upstream.params.Isha.match(/^(\d+)\s*min$/i);
+      if (match) {
+        ishaAngle = 0;
+        ishaInterval = parseInt(match[1], 10);
+      }
+    }
+    // Maghrib can be an angle (number) or an interval like "3 min"; we store angle only
+    let maghribAngle: number = 0;
+    if (typeof upstream.params?.Maghrib === 'number') {
+      maghribAngle = upstream.params.Maghrib;
+    }
     const midnight = upstream.params?.Midnight ?? 'Standard';
 
     return {
@@ -75,9 +90,9 @@ export class PrayerMapper {
       methodCode: this.generateMethodCode(upstream.name || `Method_${upstream.id}`),
       description: `Calculation method: ${upstream.name || upstream.id}`,
       fajrAngle: fajr,
-      ishaAngle: isha,
-      ishaInterval: null,
-      maghribAngle: maghrib,
+      ishaAngle: ishaAngle,
+      ishaInterval: ishaInterval,
+      maghribAngle: maghribAngle,
       midnightMode: midnight,
       source: 'aladhan',
       lastSynced: new Date(),
