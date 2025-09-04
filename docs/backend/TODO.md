@@ -1,3 +1,25 @@
+## Backend TODO Backlog
+
+Last updated: 2025-09-04
+
+| ID | Title | Module | Priority | Assignee | Estimate | Depends on | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| TASK-1 | Ensure daily Quran sync populates DB | Quran | P0 | Backend | 2d | DB up, Prisma migrate | In Progress | Verify `QuranSyncService.syncChapters/Verses` write rows; add counts.
+| TASK-2 | Ensure daily Prayer times caching and DB storage | Prayer | P0 | Backend | 2d | Redis, DB | In Progress | Verify `PrayerSyncService.syncPrayerTimes` upserts and cache usage.
+| TASK-3 | Fix any API parity mismatches discovered | Quran/Prayer | P0 | Backend | 1-2d | Upstream parity run | Pending | Compare local vs upstream JSON shapes; adjust mappers.
+| TASK-4 | Add unit/integration tests for core endpoints | All | P0 | Backend | 2-3d | Jest setup | Pending | Currently 0 tests; add tests for Quran/Prayer controllers/services.
+| TASK-5 | Implement Redis cache TTL adjustments | Cache | P1 | Backend | 1d | Redis | In Progress | Confirm TTL matrix per endpoint in `RedisService` consumers.
+| TASK-6 | Add admin sync retrigger endpoint & secure it | Sync | P1 | Backend | 1d | Auth | Pending | Endpoints exist in Swagger; ensure guard/auth and audit logs.
+| TASK-7 | Add monitoring/alerts for sync failures | Observability | P1 | Backend | 1d | DB logs | Pending | Emit errors to Sentry; track `SyncJobLog` failures.
+| TASK-8 | Create runbook docs for manual sync & rollback | Docs | P2 | Backend | 1d | Sync endpoints | Pending | Add step-by-step guides in docs/backend/runbooks.
+| TASK-9 | Export OpenAPI JSON and wire into docs | Docs | P2 | Backend | 0.5d | App running | Done | Saved to `docs/backend/openapi-latest.json`.
+| TASK-10 | Verify cron module loading in `AppModule` | Scheduler | P0 | Backend | 0.5d | ScheduleModule | Done | `ScheduleModule.forRoot()` present; crons in `SyncCronService`.
+| TASK-11 | Seed baseline data and validate counts | DB | P1 | Backend | 1d | Postgres | Pending | Run `npm run db:migrate && npm run db:seed` and verify rows.
+| TASK-12 | Health endpoints include Redis/DB checks | Platform | P1 | Backend | 0.5d | Redis/DB | In Progress | `TerminusModule` present; ensure Redis indicator wired.
+
+Notes:
+- Reference files: `src/sync/sync.cron.service.ts`, `src/app.module.ts`, `src/prayer/prayer.sync.service.ts`, `src/quran/quran.sync.service.ts`, `src/redis/redis.service.ts`.
+
 
 # 🚀 DeenMate Backend — TODO & Action Items
 
