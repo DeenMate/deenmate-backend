@@ -1,10 +1,12 @@
-import { Controller, Post, Get, Query, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Query, Res, HttpStatus, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { SyncCronService } from './sync.cron.service';
 import { QuranSyncService } from '../quran/quran.sync.service';
 import { PrayerSyncService } from '../prayer/prayer.sync.service';
+import { AdminApiKeyGuard } from '../common/guards/admin-api-key.guard';
 
 @Controller('admin/sync')
+@UseGuards(AdminApiKeyGuard)
 export class SyncController {
   constructor(
     private readonly syncCronService: SyncCronService,
