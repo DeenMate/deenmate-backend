@@ -42,7 +42,7 @@ export class QuranController {
       res.setHeader('X-DeenMate-Source', 'live-sync');
       res.setHeader('X-DeenMate-Cache', 'miss');
     }
-    return res.json(result);
+    return res.json((result as any).data ?? result);
   }
 
   @Get('chapters/:chapterNumber')
@@ -66,7 +66,7 @@ export class QuranController {
       res.setHeader('X-DeenMate-Source', 'live-sync');
       res.setHeader('X-DeenMate-Cache', 'miss');
     }
-    return res.json(result);
+    return res.json((result as any).data ?? result);
   }
 
   @Get('verses/by_chapter/:chapterNumber')
@@ -95,7 +95,7 @@ export class QuranController {
         res.setHeader('X-DeenMate-Source', 'live-sync');
         res.setHeader('X-DeenMate-Cache', 'miss');
       }
-      return res.json(result);
+      return res.json((result as any).data ?? result);
     }
 
     const result = await this.quranService.getVersesByChapter(
@@ -113,7 +113,7 @@ export class QuranController {
       res.setHeader('X-DeenMate-Source', 'live-sync');
       res.setHeader('X-DeenMate-Cache', 'miss');
     }
-    return res.json(result);
+    return res.json((result as any).data ?? result);
   }
 
   @Get('verses/:verseKey')
@@ -150,7 +150,7 @@ export class QuranController {
       res.setHeader('X-DeenMate-Source', 'live-sync');
       res.setHeader('X-DeenMate-Cache', 'miss');
     }
-    return res.json(result);
+    return res.json((result as any).data ?? result);
   }
 
   @Get('translations')
@@ -169,7 +169,7 @@ export class QuranController {
       res.setHeader('X-DeenMate-Source', 'live-sync');
       res.setHeader('X-DeenMate-Cache', 'miss');
     }
-    return res.json(result);
+    return res.json((result as any).data ?? result);
   }
 
   @Get('verses/:verseKey/translations')
@@ -201,7 +201,7 @@ export class QuranController {
     if (result.code && result.code !== 200) {
       return res.status(result.code).json(result);
     }
-    return res.json(result);
+    return res.json((result as any).data ?? result);
   }
 
   @Get('reciters')
