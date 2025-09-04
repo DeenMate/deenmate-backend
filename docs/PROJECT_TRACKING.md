@@ -9,8 +9,8 @@ Overall health: In Progress. Core modules (Quran, Prayer, Hadith, Zakat, Audio) 
 ### Module Status
 | Module | Status | % Complete | Last Sync | Last Verified | Owner | Notes |
 |---|---|---:|---|---|---|---|
-| Quran | In Progress | 70% | Unknown | 2025-09-04 | Backend | Controllers implemented, services proxy upstream and plan DB sync; cron present. DB counts unverified.
-| Prayer | In Progress | 70% | Unknown | 2025-09-04 | Backend | Controllers implemented; services proxy upstream and plan DB sync; cron present. DB counts unverified.
+| Quran | In Progress | 85% | 2025-09-04 (manual) | 2025-09-04 | Backend | DB populated (114 chapters, 6236 verses); translations inserted; cron present.
+| Prayer | In Progress | 80% | 2025-09-04 (manual) | 2025-09-04 | Backend | Methods updated; prayer_times populated for 3 cities (±7d); TTLs fixed.
 | Hadith | In Progress | 40% | N/A | 2025-09-04 | Backend | Service/controller scaffolded; upstream integration planned; DB schema outlined in docs.
 | Zakat | In Progress | 60% | N/A | 2025-09-04 | Backend | Endpoints implemented; relies on external price API.
 | Audio | In Progress | 50% | N/A | 2025-09-04 | Backend | Service + controller implemented; storage integration pending.
@@ -26,7 +26,7 @@ Dates: Sep 01–Sep 14, 2025
 
 - Done: Swagger wiring, Redis module, Prisma schema, cron scaffolds
 - In Progress: Proxy parity validation, DB sync, Redis TTL policy
-- Blocked: Automated tests missing; DB verification pending container run
+- Blocked: Automated tests missing; parity validation pending
 
 ### Key Blockers & Risks
 - No unit/integration tests discovered; CI cannot assert regressions.
