@@ -1,0 +1,1459 @@
+openapi: 3.1.0
+info:
+  title: DeenMate API
+  description: |
+    Comprehensive Islamic application backend providing access to Quran, Hadith, Prayer Times, 
+    Zakat calculations, and Islamic audio content. This API is designed to serve Islamic 
+    applications, websites, and mobile apps with accurate, reliable, and well-structured Islamic data.
+  
+    ## Features
+    - **Quran Module**: Complete Quran text, translations, and recitations
+    - **Prayer Module**: Accurate prayer times, qibla direction, and calculation methods
+    - **Hadith Module**: Authentic hadith collections and search functionality
+    - **Zakat Module**: Zakat calculations and current market values
+    - **Audio Module**: High-quality Islamic audio content and metadata
+  
+    ## Authentication
+    Currently operates in read-only mode without authentication. Future versions will include 
+    JWT-based authentication for user-specific features.
+  
+    ## Rate Limiting
+    - Public Endpoints: 100 requests per minute per IP
+    - Authenticated Endpoints: 1000 requests per minute per user
+    - Premium Tier: 5000 requests per minute per user
+  
+    ## Support
+    - Documentation: https://docs.deenmate.com
+    - API Status: https://status.deenmate.com
+    - Support Email: api-support@deenmate.com
+    - Developer Discord: https://discord.gg/deenmate
+  
+  version: 1.0.0
+  contact:
+    name: DeenMate API Support
+    email: api-support@deenmate.com
+    url: https://docs.deenmate.com
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.deenmate.com/api/v1
+    description: Production server
+  - url: https://staging-api.deenmate.com/api/v1
+    description: Staging server
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+
+tags:
+  - name: Quran
+    description: Quran text, translations, and recitations
+  - name: Prayer
+    description: Prayer times, qibla direction, and calculation methods
+  - name: Hadith
+    description: Hadith collections, books, and search functionality
+  - name: Zakat
+    description: Zakat calculations and market values
+  - name: Audio
+    description: Islamic audio content and metadata
+  - name: Health
+    description: API health and status endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health Check
+      description: Check if the API is running and healthy
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: API is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness Check
+      description: Check if the API is ready to serve requests
+      responses:
+        '200':
+          description: API is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: API is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /quran/chapters:
+    get:
+      tags:
+        - Quran
+      summary: Get All Chapters
+      description: Retrieve all 114 chapters of the Quran with metadata
+      responses:
+        '200':
+          description: List of Quran chapters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuranChaptersResponse'
+              example:
+                success: true
+                data:
+                  chapters:
+                    - id: 1
+                      chapterNumber: 1
+                      nameArabic: "الفاتحة"
+                      nameEnglish: "Al-Fatihah"
+                      versesCount: 7
+                      revelationType: "Meccan"
+                meta:
+                  totalChapters: 114
+                  cacheTtl: 86400
+
+  /quran/chapters/{chapterNumber}/verses:
+    get:
+      tags:
+        - Quran
+      summary: Get Chapter Verses
+      description: Retrieve verses from a specific chapter with pagination. Supports upstream-compatible translation parameters.
+      parameters:
+        - name: chapterNumber
+          in: path
+          required: true
+          description: Chapter ID (1-114)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 114
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: Verses per page
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: language
+          in: query
+          description: Optional language code for upstream compatibility (e.g., en)
+          schema:
+            type: string
+        - name: translations
+          in: query
+          description: Comma-separated translation resource IDs (e.g., 20,131)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chapter verses with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuranVersesResponse'
+        '400':
+          description: Invalid chapter ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Chapter not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /quran/translations:
+    get:
+      tags:
+        - Quran
+      summary: Get Translations
+      description: Retrieve available Quran translations (optionally filter by language)
+      parameters:
+        - name: language
+          in: query
+          description: Language code to filter (e.g., en, bn)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of available translations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationsResponse'
+
+  /quran/tafsirs:
+    get:
+      tags:
+        - Quran
+      summary: Get Tafsir Resources
+      description: Retrieve available tafsir resources (optionally filter by language)
+      parameters:
+        - name: language
+          in: query
+          description: Language code to filter (e.g., en, bn)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tafsir resources
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tafsirs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        language:
+                          type: string
+
+  /quran/verses/{verseKey}/tafsir:
+    get:
+      tags:
+        - Quran
+      summary: Get Tafsir for a Verse
+      description: Retrieve tafsir for a specific verse (optionally filter by tafsirId)
+      parameters:
+        - name: verseKey
+          in: path
+          required: true
+          description: Verse key (e.g., 2:255)
+          schema:
+            type: string
+        - name: tafsirId
+          in: query
+          description: Tafsir resource ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tafsir content for the verse
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tafsirs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        text:
+                          type: string
+
+  /quran/reciters:
+    get:
+      tags:
+        - Quran
+      summary: Get Reciters
+      description: Retrieve available Quran reciters (optionally filter by language)
+      parameters:
+        - name: language
+          in: query
+          description: Language code (e.g., en)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of available reciters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecitersResponse'
+
+  /quran/recitations/{recitationId}/by_chapter/{chapterNumber}:
+    get:
+      tags:
+        - Quran
+      summary: Recitation Audio by Chapter
+      description: Retrieve verse-by-verse audio for a chapter (upstream-compatible)
+      parameters:
+        - name: recitationId
+          in: path
+          required: true
+          description: Recitation (reciter) ID
+          schema:
+            type: integer
+        - name: chapterNumber
+          in: path
+          required: true
+          description: Chapter ID
+          schema:
+            type: integer
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Recitation audio list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  audio_files:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        verse_key:
+                          type: string
+                        url:
+                          type: string
+                          format: uri
+
+  /quran/recitations/{recitationId}/by_ayah/{verseKey}:
+    get:
+      tags:
+        - Quran
+      summary: Recitation Audio by Ayah
+      description: Retrieve audio for a specific ayah (upstream-compatible)
+      parameters:
+        - name: recitationId
+          in: path
+          required: true
+          description: Recitation (reciter) ID
+          schema:
+            type: integer
+        - name: verseKey
+          in: path
+          required: true
+          description: Verse key (e.g., 2:255)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recitation audio for ayah
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  audio_file:
+                    type: object
+                    properties:
+                      verse_key:
+                        type: string
+                      url:
+                        type: string
+                        format: uri
+
+  /quran/verses/{verseKey}:
+    get:
+      tags:
+        - Quran
+      summary: Get Verse
+      description: Retrieve a specific verse. Supports upstream-compatible translation parameters.
+      parameters:
+        - name: verseKey
+          in: path
+          required: true
+          description: Verse key (e.g., 2:255)
+          schema:
+            type: string
+        - name: language
+          in: query
+          description: Optional language code for upstream compatibility (e.g., en)
+          schema:
+            type: string
+        - name: translations
+          in: query
+          description: Comma-separated translation resource IDs (e.g., 20,131)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Verse content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verse:
+                    $ref: '#/components/schemas/QuranVerse'
+
+  /prayer/times/{date}:
+    get:
+      tags:
+        - Prayer
+      summary: Get Daily Prayer Times
+      description: Upstream-compatible with aladhan.com/v1/timings/{date}
+      parameters:
+        - name: date
+          in: path
+          required: true
+          description: Date in YYYY-MM-DD format
+          schema:
+            type: string
+            format: date
+        - name: lat
+          in: query
+          required: true
+          description: Latitude
+          schema:
+            type: number
+            format: float
+        - name: lng
+          in: query
+          required: true
+          description: Longitude
+          schema:
+            type: number
+            format: float
+        - name: method
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: school
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: latitudeAdjustmentMethod
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1, 2]
+        - name: tune
+          in: query
+          schema:
+            type: string
+            description: Comma-separated 7 integer minute offsets
+        - name: timezonestring
+          in: query
+          schema:
+            type: string
+            description: IANA timezone (e.g., Asia/Dhaka)
+      responses:
+        '200':
+          description: Daily prayer times
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrayerTimesResponse'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /prayer/times/{locKey}/monthly/{year}/{month}:
+    get:
+      tags:
+        - Prayer
+      summary: Get Monthly Prayer Calendar
+      description: Upstream-compatible with aladhan.com/v1/calendar/{year}/{month}
+      parameters:
+        - name: locKey
+          in: path
+          required: true
+          description: DeenMate location key (hash of lat/lng)
+          schema:
+            type: string
+        - name: year
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: method
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: school
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: lat
+          in: query
+          description: Latitude (for upstream fallback only)
+          schema:
+            type: number
+            format: float
+        - name: lng
+          in: query
+          description: Longitude (for upstream fallback only)
+          schema:
+            type: number
+            format: float
+        - name: latitudeAdjustmentMethod
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1, 2]
+        - name: tune
+          in: query
+          schema:
+            type: string
+            description: Comma-separated 7 integer minute offsets
+        - name: timezonestring
+          in: query
+          schema:
+            type: string
+            description: IANA timezone (e.g., Asia/Dhaka)
+      responses:
+        '200':
+          description: Monthly prayer calendar
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrayerTimes'
+
+  /prayer/qibla:
+    get:
+      tags:
+        - Prayer
+      summary: Get Qibla Direction
+      description: Calculate qibla direction from a location
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          description: Latitude coordinate
+          schema:
+            type: number
+            format: float
+        - name: longitude
+          in: query
+          required: true
+          description: Longitude coordinate
+          schema:
+            type: number
+            format: float
+      responses:
+        '200':
+          description: Qibla direction information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QiblaResponse'
+
+  /prayer/methods:
+    get:
+      tags:
+        - Prayer
+      summary: Get Calculation Methods
+      description: Retrieve available prayer time calculation methods
+      responses:
+        '200':
+          description: List of calculation methods
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculationMethodsResponse'
+
+  /hadith/collections:
+    get:
+      tags:
+        - Hadith
+      summary: Get Collections
+      description: Retrieve available hadith collections
+      responses:
+        '200':
+          description: List of hadith collections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HadithCollectionsResponse'
+
+  /hadith/collections/{id}/books:
+    get:
+      tags:
+        - Hadith
+      summary: Get Books in Collection
+      description: Retrieve books from a specific hadith collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Collection ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of books in the collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HadithBooksResponse'
+
+  /hadith/collections/{collectionId}/books/{bookId}/hadiths:
+    get:
+      tags:
+        - Hadith
+      summary: Get Hadiths in Book
+      description: Retrieve hadiths from a specific book with pagination
+      parameters:
+        - name: collectionId
+          in: path
+          required: true
+          description: Collection ID
+          schema:
+            type: integer
+        - name: bookId
+          in: path
+          required: true
+          description: Book ID
+          schema:
+            type: integer
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Hadiths per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Hadiths with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HadithsResponse'
+
+  /hadith/search:
+    get:
+      tags:
+        - Hadith
+      summary: Search Hadiths
+      description: Search hadiths across collections
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 1
+        - name: collection
+          in: query
+          description: Collection ID to search within
+          schema:
+            type: integer
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Results per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Search results with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HadithSearchResponse'
+        '400':
+          description: Missing search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /hadith/{id}:
+    get:
+      tags:
+        - Hadith
+      summary: Get Hadith by ID
+      description: Retrieve a specific hadith by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Hadith ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Hadith details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HadithResponse'
+        '404':
+          description: Hadith not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /zakat/nisab:
+    get:
+      tags:
+        - Zakat
+      summary: Get Nisab Values
+      description: Retrieve current nisab values for zakat calculation
+      parameters:
+        - name: currency
+          in: query
+          description: Currency code
+          schema:
+            type: string
+            default: USD
+            enum: [USD, SAR, BDT, EUR, GBP]
+      responses:
+        '200':
+          description: Current nisab values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NisabValuesResponse'
+
+  /zakat/calculate:
+    post:
+      tags:
+        - Zakat
+      summary: Calculate Zakat
+      description: Calculate zakat amount based on wealth details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalculateZakatRequest'
+            example:
+              gold: 1000
+              silver: 0
+              cash: 5000
+              investments: 2000
+              other: 0
+              currency: "USD"
+      responses:
+        '200':
+          description: Zakat calculation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZakatCalculationResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /zakat/gold-price:
+    get:
+      tags:
+        - Zakat
+      summary: Get Gold Price
+      description: Retrieve current gold price
+      parameters:
+        - name: currency
+          in: query
+          description: Currency code
+          schema:
+            type: string
+            default: USD
+      responses:
+        '200':
+          description: Current gold price
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoldPriceResponse'
+
+  /zakat/currencies:
+    get:
+      tags:
+        - Zakat
+      summary: Get Supported Currencies
+      description: Retrieve list of supported currencies
+      responses:
+        '200':
+          description: List of supported currencies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrenciesResponse'
+
+  /zakat/history:
+    get:
+      tags:
+        - Zakat
+      summary: Get Zakat History
+      description: Retrieve zakat calculation history
+      parameters:
+        - name: userId
+          in: query
+          description: User ID (for future authenticated access)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Zakat calculation history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZakatHistoryResponse'
+
+  /audio/verse/{reciterId}/{chapterId}/{verseNumber}:
+    get:
+      tags:
+      - Quran
+      summary: Get Verse Audio
+      description: Retrieve audio metadata for a specific verse
+      parameters:
+        - name: reciterId
+          in: path
+          required: true
+          description: Reciter ID
+          schema:
+            type: integer
+        - name: chapterId
+          in: path
+          required: true
+          description: Chapter ID
+          schema:
+            type: integer
+        - name: verseNumber
+          in: path
+          required: true
+          description: Verse number
+          schema:
+            type: integer
+        - name: quality
+          in: query
+          description: Audio quality
+          schema:
+            type: string
+            enum: [64kbps, 128kbps, 192kbps, 320kbps]
+            default: 128kbps
+      responses:
+        '200':
+          description: Verse audio metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerseAudioResponse'
+
+  /audio/chapter/{reciterId}/{chapterId}:
+    get:
+      tags:
+      - Quran
+      summary: Get Chapter Audio
+      description: Retrieve audio metadata for a complete chapter
+      parameters:
+        - name: reciterId
+          in: path
+          required: true
+          description: Reciter ID
+          schema:
+            type: integer
+        - name: chapterId
+          in: path
+          required: true
+          description: Chapter ID
+          schema:
+            type: integer
+        - name: quality
+          in: query
+          description: Audio quality
+          schema:
+            type: string
+            enum: [64kbps, 128kbps, 192kbps, 320kbps]
+            default: 128kbps
+      responses:
+        '200':
+          description: Chapter audio metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterAudioResponse'
+
+  /audio/qualities:
+    get:
+      tags:
+      - Quran
+      summary: Get Available Qualities
+      description: Retrieve available audio quality options
+      responses:
+        '200':
+          description: List of available audio qualities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioQualitiesResponse'
+
+  /audio/reciter/{reciterId}/stats:
+    get:
+      tags:
+      - Quran
+      summary: Get Reciter Stats
+      description: Retrieve audio statistics for a specific reciter
+      parameters:
+        - name: reciterId
+          in: path
+          required: true
+          description: Reciter ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reciter audio statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReciterStatsResponse'
+
+  /audio/search:
+    get:
+      tags:
+      - Quran
+      summary: Search Audio
+      description: Search audio content
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 1
+        - name: reciter
+          in: query
+          description: Reciter ID
+          schema:
+            type: string
+        - name: quality
+          in: query
+          description: Audio quality
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: string
+            default: "1"
+        - name: per_page
+          in: query
+          description: Results per page
+          schema:
+            type: string
+            default: "20"
+      responses:
+        '200':
+          description: Search results with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioSearchResponse'
+        '400':
+          description: Missing search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /audio/validate:
+    get:
+      tags:
+      - Quran
+      summary: Validate Audio URL
+      description: Validate if an audio URL is still valid
+      parameters:
+        - name: url
+          in: query
+          required: true
+          description: Audio URL to validate
+          schema:
+            type: string
+            format: uri
+      responses:
+        '200':
+          description: URL validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrlValidationResponse'
+        '400':
+          description: Missing URL parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    # Common Response Schemas
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the request was successful
+        data:
+          description: Response data
+        meta:
+          description: Metadata about the response
+      required:
+        - success
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: false
+            error:
+              type: string
+              description: Error message
+            code:
+              type: string
+              description: Error code
+            details:
+              description: Additional error details
+          required:
+            - error
+
+    PaginationMeta:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          description: Current page number
+        perPage:
+          type: integer
+          description: Items per page
+        totalPages:
+          type: integer
+          description: Total number of pages
+        totalItems:
+          type: integer
+          description: Total number of items
+
+    # Health Schemas
+    HealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [healthy, unhealthy]
+                timestamp:
+                  type: string
+                  format: date-time
+                uptime:
+                  type: number
+                  description: API uptime in seconds
+
+    ReadinessResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [ready, not_ready]
+                checks:
+                  type: object
+                  properties:
+                    database:
+                      type: string
+                      enum: [up, down]
+                    redis:
+                      type: string
+                      enum: [up, down]
+
+    # Quran Schemas
+    QuranChapter:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique chapter ID
+        chapterNumber:
+          type: integer
+          description: Chapter number (1-114)
+        nameArabic:
+          type: string
+          description: Chapter name in Arabic
+        nameEnglish:
+          type: string
+          description: Chapter name in English
+        versesCount:
+          type: integer
+          description: Number of verses in the chapter
+        revelationType:
+          type: string
+          enum: [Meccan, Medinan]
+          description: Where the chapter was revealed
+      required:
+        - id
+        - chapterNumber
+        - nameArabic
+        - nameEnglish
+        - versesCount
+
+    QuranVerse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique verse ID
+        verseNumber:
+          type: integer
+          description: Verse number within the chapter
+        textUthmani:
+          type: string
+          description: Verse text in Uthmani script
+        textIndopak:
+          type: string
+          description: Verse text in Indopak script
+        juz:
+          type: integer
+          description: Juz number
+        hizb:
+          type: integer
+          description: Hizb number
+        page:
+          type: integer
+          description: Page number in the Mushaf
+      required:
+        - id
+        - verseNumber
+        - textUthmani
+
+    QuranChaptersResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              properties:
+                chapters:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/QuranChapter'
+            meta:
+              type: object
+              properties:
+                totalChapters:
+                  type: integer
+                  description: Total number of chapters
+                cacheTtl:
+                  type: integer
+                  description: Cache TTL in seconds
+
+    QuranVersesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              properties:
+                verses:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/QuranVerse'
+                pagination:
+                  $ref: '#/components/schemas/PaginationMeta'
+
+    # Prayer Schemas
+    PrayerTimes:
+      type: object
+      properties:
+        fajr:
+          type: string
+          description: Fajr prayer time (HH:MM)
+        sunrise:
+          type: string
+          description: Sunrise time (HH:MM)
+        dhuhr:
+          type: string
+          description: Dhuhr prayer time (HH:MM)
+        asr:
+          type: string
+          description: Asr prayer time (HH:MM)
+        maghrib:
+          type: string
+          description: Maghrib prayer time (HH:MM)
+        isha:
+          type: string
+          description: Isha prayer time (HH:MM)
+        method:
+          type: string
+          description: Calculation method used
+
+    PrayerTimesResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              properties:
+                prayerTimes:
+                  $ref: '#/components/schemas/PrayerTimes'
+                location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+                method:
+                  type: integer
+                  description: Calculation method ID
+                date:
+                  type: string
+                  format: date
+            meta:
+              type: object
+              properties:
+                cacheTtl:
+                  type: string
+                  description: Cache TTL information
+                calculationMethod:
+                  type: string
+                  description: Calculation method name
+
+    # Zakat Schemas
+    CalculateZakatRequest:
+      type: object
+      properties:
+        gold:
+          type: number
+          description: Gold value in specified currency
+          default: 0
+        silver:
+          type: number
+          description: Silver value in specified currency
+          default: 0
+        cash:
+          type: number
+          description: Cash value in specified currency
+          default: 0
+        investments:
+          type: number
+          description: Investment value in specified currency
+          default: 0
+        other:
+          type: number
+          description: Other assets value in specified currency
+          default: 0
+        currency:
+          type: string
+          description: Currency code
+          default: USD
+          enum: [USD, SAR, BDT, EUR, GBP]
+      required:
+        - currency
+
+    ZakatCalculation:
+      type: object
+      properties:
+        totalWealth:
+          type: number
+          description: Total wealth value
+        zakatAmount:
+          type: number
+          description: Calculated zakat amount
+        zakatPercentage:
+          type: number
+          description: Zakat percentage (2.5)
+        nisabThreshold:
+          type: number
+          description: Nisab threshold value
+        calculationDate:
+          type: string
+          format: date
+        breakdown:
+          type: object
+          properties:
+            gold:
+              type: number
+            silver:
+              type: number
+            cash:
+              type: number
+            investments:
+              type: number
+            other:
+              type: number
+
+    ZakatCalculationResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              properties:
+                calculation:
+                  $ref: '#/components/schemas/ZakatCalculation'
+            meta:
+              type: object
+              properties:
+                calculationDate:
+                  type: string
+                  format: date
+                nisabThreshold:
+                  type: number
+                zakatRate:
+                  type: string
+
+    # Audio Schemas
+    AudioMetadata:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique audio ID
+        reciterId:
+          type: integer
+          description: Reciter ID
+        chapterId:
+          type: integer
+          description: Chapter ID
+        verseNumber:
+          type: integer
+          description: Verse number (for verse audio)
+        quality:
+          type: string
+          description: Audio quality
+        format:
+          type: string
+          description: Audio format
+        duration:
+          type: integer
+          description: Duration in seconds
+        fileSize:
+          type: integer
+          description: File size in bytes
+        url:
+          type: string
+          format: uri
+          description: Audio file URL
+        expiresAt:
+          type: string
+          format: date-time
+          description: URL expiration time
+
+    VerseAudioResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              const: true
+            data:
+              type: object
+              properties:
+                audioMetadata:
+                  $ref: '#/components/schemas/AudioMetadata'
+            meta:
+              type: object
+              properties:
+                type:
+                  type: string
+                  const: verse
+                reciterId:
+                  type: integer
+                chapterId:
+                  type: integer
+                verseNumber:
+                  type: integer
+                quality:
+                  type: string
+                cacheTtl:
+                  type: string
+
+  # Security Schemes (for future use)
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authenticated endpoints
+
+# Global security (for future use)
+# security:
+#   - BearerAuth: []

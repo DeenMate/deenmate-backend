@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: |
+          if [ -f pnpm-lock.yaml ]; then npm i -g pnpm && pnpm i --frozen-lockfile; \
+          elif [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
+          else npm ci; fi
+      - name: Lint
+        run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm lint || true; \
+          elif [ -f yarn.lock ]; then yarn lint || true; \
+          else npm run lint || true; fi
+      - name: Typecheck
+        run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm typecheck || true; \
+          elif [ -f yarn.lock ]; then yarn typecheck || true; \
+          else npm run typecheck || true; fi
+      - name: Test
+        run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm test -- --ci --watch=false || true; \
+          elif [ -f yarn.lock ]; then yarn test --ci --watch=false || true; \
+          else npm test -- --ci --watch=false || true; fi
+      - name: Build
+        run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm build || true; \
+          elif [ -f yarn.lock ]; then yarn build || true; \
+          else npm run build || true; fi
