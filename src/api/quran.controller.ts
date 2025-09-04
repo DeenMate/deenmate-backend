@@ -2,7 +2,7 @@ import { Controller, Get, Param, Query, Res, HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
 import { QuranService } from '../services/quran.service';
 
-@Controller('api/v1/quran')
+@Controller('quran')
 export class QuranController {
   constructor(private readonly quranService: QuranService) {}
 

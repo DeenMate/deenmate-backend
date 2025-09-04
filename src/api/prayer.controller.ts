@@ -2,7 +2,7 @@ import { Controller, Get, Param, Query, Res, HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
 import { PrayerService } from '../services/prayer.service';
 
-@Controller('api/v1/prayer')
+@Controller('prayer')
 export class PrayerController {
   constructor(private readonly prayerService: PrayerService) {}
 
