@@ -69,7 +69,7 @@ export class QuranController {
     return res.json(result);
   }
 
-  @Get('chapters/:chapterNumber/verses')
+  @Get('verses/by_chapter/:chapterNumber')
   @ApiOperation({ summary: 'List verses by chapter', description: 'Upstream-compatible with api.quran.com/v4/verses/by_chapter/{chapter}' })
   @ApiQuery({ name: 'language', required: false, description: 'e.g., en' })
   @ApiQuery({ name: 'translations', required: false, description: 'Comma-separated translation resource IDs' })

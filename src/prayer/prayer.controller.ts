@@ -122,11 +122,8 @@ export class PrayerController {
     });
   }
 
-  @Get('times/:date')
-  @ApiOperation({
-    summary: 'Get daily prayer times',
-    description: 'Upstream-compatible with aladhan.com/v1/timings/{date}. Example: /prayer/times/2025-09-04?lat=23.8103&lng=90.4125&method=2&school=1&latitudeAdjustmentMethod=1&tune=1,2,3,4,5,6,7&timezonestring=Asia/Dhaka',
-  })
+  @Get('timings')
+  @ApiOperation({ summary: 'Get daily prayer times', description: 'Upstream-compatible with aladhan.com/v1/timings' })
   @ApiQuery({ name: 'lat', required: true, description: 'Latitude', example: 23.8103 })
   @ApiQuery({ name: 'lng', required: true, description: 'Longitude', example: 90.4125 })
   @ApiQuery({ name: 'method', required: false, schema: { type: 'integer', default: 1 }, example: 2 })
@@ -138,9 +135,9 @@ export class PrayerController {
   @ApiResponse({ status: 400, description: 'Bad Request' })
   async getPrayerTimes(
     @Res() res: Response,
-    @Param('date') date: string,
-    @Query('lat') lat: string,
-    @Query('lng') lng: string,
+    @Query('latitude') lat: string,
+    @Query('longitude') lng: string,
+    @Query('date') date?: string,
     @Query('method') method: string = '1',
     @Query('school') school: string = '0',
     @Query('latitudeAdjustmentMethod') latitudeAdjustmentMethod?: string,
@@ -155,14 +152,7 @@ export class PrayerController {
       });
     }
     
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) {
-      return res.status(400).json({
-        code: 400,
-        status: 'Bad Request',
-        message: 'Invalid date format. Use YYYY-MM-DD',
-      });
-    }
+    const dateObj = date ? new Date(date) : new Date();
     
     const result = await this.prayerService.getDailyPrayerTimes(
       parseFloat(lat),
