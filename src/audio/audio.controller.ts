@@ -1,11 +1,15 @@
 import { Controller, Get, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { AudioService, AudioMetadata, AudioQuality } from './audio.service';
+import { ReciterManagerService } from './reciter-manager.service';
 import { ApiTags } from '@nestjs/swagger';
 
-@ApiTags('Quran')
-@Controller('audio')
+@ApiTags('Audio v4')
+@Controller({ path: 'audio', version: '4' })
 export class AudioController {
-  constructor(private readonly audioService: AudioService) {}
+  constructor(
+    private readonly audioService: AudioService,
+    private readonly reciterManagerService: ReciterManagerService,
+  ) {}
 
   @Get('verse/:reciterId/:chapterId/:verseNumber')
   async getVerseAudio(
@@ -146,6 +150,56 @@ export class AudioController {
       meta: {
         note: 'URL validation result',
       },
+    };
+  }
+
+  @Get('reciters')
+  async getAllReciters() {
+    const reciters = await this.reciterManagerService.getAllReciters();
+    return {
+      success: true,
+      data: {
+        reciters,
+        total: reciters.length,
+      },
+    };
+  }
+
+  @Get('reciters/working')
+  async getWorkingReciters() {
+    const reciters = await this.reciterManagerService.getWorkingReciters();
+    return {
+      success: true,
+      data: {
+        reciters,
+        total: reciters.length,
+      },
+    };
+  }
+
+  @Get('reciters/stats')
+  async getReciterStats() {
+    const stats = await this.reciterManagerService.getReciterStats();
+    return {
+      success: true,
+      data: stats,
+    };
+  }
+
+  @Get('reciters/:sourceId')
+  async getReciterBySourceId(@Param('sourceId', ParseIntPipe) sourceId: number) {
+    const reciter = await this.reciterManagerService.getReciterBySourceId(sourceId);
+    
+    if (!reciter) {
+      return {
+        success: false,
+        message: 'Reciter not found',
+      };
+    }
+
+    return {
+      success: true,
+      data: reciter,
     };
   }
 }

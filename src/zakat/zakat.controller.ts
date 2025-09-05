@@ -11,8 +11,8 @@ export class CalculateZakatDto {
   currency: string = 'USD';
 }
 
-@ApiTags('Zakat')
-@Controller('zakat')
+@ApiTags('Zakat v4')
+@Controller({ path: 'zakat', version: '4' })
 export class ZakatController {
   constructor(private readonly zakatService: ZakatService) {}
 

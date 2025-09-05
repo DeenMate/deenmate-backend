@@ -31,17 +31,17 @@ Complete guide for deploying the API to production.
 ## 🔗 **External Resources**
 
 ### **API Endpoints**
-- **Production**: `https://api.deenmate.com/api/v1`
-- **Staging**: `https://staging-api.deenmate.com/api/v1`
+- **Production**: `https://api.deenmate.app/api/v1`
+- **Staging**: `https://staging-api.deenmate.app/api/v1`
 - **Local**: `http://localhost:3000/api/v1`
 
 ### **Documentation Sites**
-- **Main Docs**: [https://docs.deenmate.com](https://docs.deenmate.com)
-- **API Status**: [https://status.deenmate.com](https://status.deenmate.com)
-- **Developer Portal**: [https://developers.deenmate.com](https://developers.deenmate.com)
+- **Main Docs**: [https://docs.deenmate.app](https://docs.deenmate.app)
+- **API Status**: [https://status.deenmate.app](https://status.deenmate.app)
+- **Developer Portal**: [https://developers.deenmate.app](https://developers.deenmate.app)
 
 ### **Support & Community**
-- **Support Email**: api-support@deenmate.com
+- **Support Email**: api-support@deenmate.app
 - **Developer Discord**: [https://discord.gg/deenmate](https://discord.gg/deenmate)
 - **GitHub Issues**: [https://github.com/deenmate/api/issues](https://github.com/deenmate/api/issues)
 
@@ -104,6 +104,16 @@ Complete guide for deploying the API to production.
 - Reciter statistics and metadata
 - URL validation and signing
 
+### **💱 Finance Module**
+- Bangladesh gold and silver prices scraped daily
+- Append-only history with change detection
+- On-demand unit conversion (Gram ↔ Vori)
+
+**Key Endpoints:**
+- `GET /finance/gold-prices/latest?unit=Gram|Vori` - Latest prices by category
+- `GET /finance/gold-prices/history?from&to&metal&category&unit&preferredUnit` - Historical prices with filters
+- `POST /admin/sync/gold-prices` - Admin retrigger (header: `x-admin-api-key`)
+
 **Key Endpoints:**
 - `GET /audio/verse/{reciterId}/{chapterId}/{verseNumber}` - Verse audio
 - `GET /audio/chapter/{reciterId}/{chapterId}` - Chapter audio
@@ -136,7 +146,7 @@ Complete guide for deploying the API to production.
 
 ### **OpenAPI 3.1**
 - **File**: [openapi.yaml](openapi.yaml)
-- **Interactive Docs**: [https://docs.deenmate.com/swagger](https://docs.deenmate.com/swagger)
+- **Interactive Docs**: [https://docs.deenmate.app/swagger](https://docs.deenmate.app/swagger)
 - **Schema Validation**: Complete request/response schemas
 - **Authentication**: JWT bearer token (future)
 
@@ -216,7 +226,7 @@ Complete guide for deploying the API to production.
 ### **2. Set Up Your Environment**
 ```bash
 # Test the API
-curl https://api.deenmate.com/api/v1/health
+curl https://api.deenmate.app/api/v1/health
 
 # Download Postman collection
 # Import docs/api/postman-collection.json
@@ -226,7 +236,7 @@ curl https://api.deenmate.com/api/v1/health
 ```javascript
 // Simple prayer times integration
 const response = await fetch(
-  'https://api.deenmate.com/api/v1/prayer/times?latitude=23.8103&longitude=90.4125'
+  'https://api.deenmate.app/api/v1/prayer/times?latitude=23.8103&longitude=90.4125'
 );
 const data = await response.json();
 console.log(data.data.prayerTimes);

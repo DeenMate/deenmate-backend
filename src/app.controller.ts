@@ -6,7 +6,7 @@ import {
 } from "@nestjs/terminus";
 import { RedisService } from "./redis/redis.service";
 
-@Controller()
+@Controller({ path: '', version: '4' })
 export class AppController {
   constructor(
     private health: HealthCheckService,

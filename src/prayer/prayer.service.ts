@@ -8,16 +8,25 @@ import { generateLocationKey } from '../common/utils/hash.util';
 export class PrayerService {
   private readonly logger = new Logger(PrayerService.name);
   private readonly upstreamBaseUrl = 'https://api.aladhan.com/v1';
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly httpService: CommonHttpService,
     private readonly mapper: PrayerMapper,
-  ) {}
+  ) {
+    this.logger.log('PrayerService initialized');
+  }
 
   async getCalculationMethods() {
     try {
       const methods = await (this.prisma as any).prayerCalculationMethod.findMany({
+        where: {
+          methodName: {
+            not: null,
+          },
+          methodCode: {
+            not: null,
+          },
+        },
         select: {
           id: true,
           methodName: true,
@@ -390,6 +399,7 @@ export class PrayerService {
     timezonestring?: string,
   ) {
     try {
+
       // Generate location key
       const locKey = generateLocationKey(lat, lng);
       
@@ -417,6 +427,7 @@ export class PrayerService {
       return await this.fallbackToUpstream('timings', { lat, lng, date, method, school, latitudeAdjustmentMethod, tune, timezonestring });
     }
   }
+
 
   private async fallbackToUpstream(endpoint: string, params: any) {
     try {
@@ -448,6 +459,19 @@ export class PrayerService {
           if (params.tune) qp.push(`tune=${encodeURIComponent(params.tune)}`);
           if (params.timezonestring) qp.push(`timezonestring=${encodeURIComponent(params.timezonestring)}`);
           url += `/timings/${dateStr}?${qp.join('&')}`;
+          break;
+        }
+        case 'timingsByCity': {
+          const dateStr = params.date ? params.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+          const qp: string[] = [];
+          qp.push(`city=${encodeURIComponent(params.city)}`);
+          qp.push(`country=${encodeURIComponent(params.country)}`);
+          qp.push(`method=${params.method || 1}`);
+          qp.push(`school=${params.school || 0}`);
+          if (typeof params.latitudeAdjustmentMethod === 'number') qp.push(`latitudeAdjustmentMethod=${params.latitudeAdjustmentMethod}`);
+          if (params.tune) qp.push(`tune=${encodeURIComponent(params.tune)}`);
+          if (params.timezonestring) qp.push(`timezonestring=${encodeURIComponent(params.timezonestring)}`);
+          url += `/timingsByCity/${dateStr}?${qp.join('&')}`;
           break;
         }
         case 'calendar': {
@@ -496,26 +520,98 @@ export class PrayerService {
     }
   }
 
-  private calculateMockPrayerTimes(
+  private calculatePrayerTimes(
     date: Date,
     lat: number,
     lng: number,
     method: number,
     school: number,
   ) {
-    // Mock calculation - this will be replaced with actual prayer time calculation
-    const baseTime = new Date(date);
-    baseTime.setHours(0, 0, 0, 0);
-    
-    return {
-      fajr: new Date(baseTime.getTime() + 5 * 60 * 60 * 1000), // 5:00 AM
-      sunrise: new Date(baseTime.getTime() + 6 * 60 * 60 * 1000), // 6:00 AM
-      dhuhr: new Date(baseTime.getTime() + 12 * 60 * 60 * 1000), // 12:00 PM
-      asr: new Date(baseTime.getTime() + 15 * 60 * 60 * 1000), // 3:00 PM
-      maghrib: new Date(baseTime.getTime() + 18 * 60 * 60 * 1000), // 6:00 PM
-      isha: new Date(baseTime.getTime() + 19 * 60 * 60 * 1000), // 7:00 PM
-      imsak: new Date(baseTime.getTime() + 4 * 60 * 60 * 1000), // 4:00 AM
-      midnight: new Date(baseTime.getTime() + 24 * 60 * 60 * 1000), // 12:00 AM next day
-    };
+    // This method should be implemented with actual prayer time calculation
+    // For now, throw an error to indicate this needs proper implementation
+    throw new Error('Prayer time calculation not implemented. Use database or upstream API.');
+  }
+
+  async getPrayerTimesByCity(
+    city: string,
+    country: string,
+    date: Date = new Date(),
+    method: number = 1,
+    school: number = 0,
+    latitudeAdjustmentMethod?: number,
+    tune?: string,
+    timezonestring?: string,
+  ) {
+    try {
+      this.logger.log(`Getting prayer times for ${city}, ${country}`);
+      
+      // For city-based requests, we'll always fallback to upstream API
+      // as we don't store city-based prayer times in our database
+      return await this.fallbackToUpstream('timingsByCity', { 
+        city, 
+        country, 
+        date, 
+        method, 
+        school, 
+        latitudeAdjustmentMethod, 
+        tune, 
+        timezonestring 
+      });
+    } catch (error) {
+      this.logger.error(`Failed to get prayer times by city: ${error.message}`);
+      return await this.fallbackToUpstream('timingsByCity', { 
+        city, 
+        country, 
+        date, 
+        method, 
+        school, 
+        latitudeAdjustmentMethod, 
+        tune, 
+        timezonestring 
+      });
+    }
+  }
+
+  async getPrayerCalendar(
+    lat: number,
+    lng: number,
+    month: number,
+    year: number,
+    method: number = 1,
+    school: number = 0,
+    latitudeAdjustmentMethod?: number,
+    tune?: string,
+    timezonestring?: string,
+  ) {
+    try {
+      this.logger.log(`Getting prayer calendar for ${lat},${lng} - ${month}/${year}`);
+      
+      // For calendar requests, we'll always fallback to upstream API
+      // as we don't store monthly calendar data in our database
+      return await this.fallbackToUpstream('calendar', { 
+        lat, 
+        lng, 
+        month, 
+        year, 
+        method, 
+        school, 
+        latitudeAdjustmentMethod, 
+        tune, 
+        timezonestring 
+      });
+    } catch (error) {
+      this.logger.error(`Failed to get prayer calendar: ${error.message}`);
+      return await this.fallbackToUpstream('calendar', { 
+        lat, 
+        lng, 
+        month, 
+        year, 
+        method, 
+        school, 
+        latitudeAdjustmentMethod, 
+        tune, 
+        timezonestring 
+      });
+    }
   }
 }

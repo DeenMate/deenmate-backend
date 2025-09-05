@@ -2,8 +2,8 @@ import { Controller, Get, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { HadithService, HadithCollection, HadithBook, Hadith } from './hadith.service';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 
-@ApiTags('Hadith')
-@Controller('hadith')
+@ApiTags('Hadith v4')
+@Controller({ path: 'hadith', version: '4' })
 export class HadithController {
   constructor(private readonly hadithService: HadithService) {}
 

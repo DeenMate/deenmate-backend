@@ -398,7 +398,7 @@ This document provides comprehensive research on third-party API providers for D
 | Domain | Primary | Fallback | Auth | Rate Limits | Cost | Reliability |
 |--------|---------|----------|------|-------------|------|-------------|
 | **Quran** | Quran.com API | AlQuran.cloud | Optional | Generous | Free/Paid | 99.5% |
-| **Prayer** | Aladhan | Local calc | None | Fair use | Free | 99.9% |
+| **Prayer** | Aladhan | None | None | Fair use | Free | 99.9% |
 | **Hadith** | Sunnah.com | Local data | API Key | TBD | Free/Educational | TBD |
 | **Gold** | MetalpriceAPI | Metals.live | API Key | 50-50k/month | $0-40/month | 95% |
 | **Audio** | QuranCDN | Cloudflare R2 | None | None | Free/CDN costs | 99% |
@@ -457,7 +457,7 @@ This document provides comprehensive research on third-party API providers for D
 ```
 DeenMate Backend API
 ├── Quran: Quran.com API v4 (primary) + local cache
-├── Prayer: Aladhan API (primary) + local calculation (fallback)
+├── Prayer: Aladhan API (primary)
 ├── Hadith: Sunnah.com API (pending) + local datasets (current)
 ├── Gold: MetalpriceAPI (primary) + Metals.live (fallback)
 └── Audio: QuranCDN (primary) + Cloudflare R2 (backend)

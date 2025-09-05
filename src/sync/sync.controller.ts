@@ -1,17 +1,23 @@
 import { Controller, Post, Get, Query, Res, HttpStatus, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
+import { ApiTags } from '@nestjs/swagger';
 import { SyncCronService } from './sync.cron.service';
 import { QuranSyncService } from '../quran/quran.sync.service';
 import { PrayerSyncService } from '../prayer/prayer.sync.service';
+import { AudioSyncService } from '../audio/audio.sync.service';
+import { AudioSeedService } from '../audio/audio.seed.service';
 import { AdminApiKeyGuard } from '../common/guards/admin-api-key.guard';
 
-@Controller('admin/sync')
+@ApiTags('Admin v4')
+@Controller({ path: 'admin/sync', version: '4' })
 @UseGuards(AdminApiKeyGuard)
 export class SyncController {
   constructor(
     private readonly syncCronService: SyncCronService,
     private readonly quranSyncService: QuranSyncService,
     private readonly prayerSyncService: PrayerSyncService,
+    private readonly audioSyncService: AudioSyncService,
+    private readonly audioSeedService: AudioSeedService,
   ) {}
 
   @Post('quran')
@@ -126,10 +132,11 @@ export class SyncController {
         });
       }
 
-      // Run both syncs in parallel
-      const [quranResult, prayerResult] = await Promise.all([
+      // Run all syncs in parallel
+      const [quranResult, prayerResult, audioResult] = await Promise.all([
         this.syncCronService.manualQuranSync(forceSync),
         this.syncCronService.manualPrayerSync(forceSync),
+        this.audioSyncService.syncAllAudioFiles(),
       ]);
 
       return res.status(HttpStatus.OK).json({
@@ -138,6 +145,7 @@ export class SyncController {
         results: {
           quran: quranResult,
           prayer: prayerResult,
+          audio: audioResult,
         },
       });
     } catch (error) {
@@ -296,6 +304,82 @@ export class SyncController {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: 'Prayer times sync failed',
+        error: error.message,
+      });
+    }
+  }
+
+  @Post('audio/reciters')
+  async syncAudioReciters(
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.audioSyncService.syncReciters();
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message: 'Audio reciters sync completed',
+        result,
+      });
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Audio reciters sync failed',
+        error: error.message,
+      });
+    }
+  }
+
+  @Post('audio/files')
+  async syncAudioFiles(
+    @Res() res: Response,
+    @Query('reciterId') reciterId?: string,
+    @Query('chapterId') chapterId?: string,
+  ) {
+    try {
+      let result;
+      
+      if (reciterId && chapterId) {
+        result = await this.audioSyncService.syncAudioFilesForChapter(
+          parseInt(reciterId),
+          parseInt(chapterId)
+        );
+      } else {
+        result = await this.audioSyncService.syncAllAudioFiles();
+      }
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message: 'Audio files sync completed',
+        result,
+      });
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Audio files sync failed',
+        error: error.message,
+      });
+    }
+  }
+
+  @Post('audio/seed')
+  async seedAudioData(
+    @Res() res: Response,
+  ) {
+    try {
+      await this.audioSeedService.runFullSeed();
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message: 'Audio data seed completed successfully',
+        data: {
+          note: 'Seeded reciters and audio files for first 3 chapters',
+        },
+      });
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Audio data seed failed',
         error: error.message,
       });
     }

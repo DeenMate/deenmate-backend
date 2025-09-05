@@ -13,8 +13,8 @@ type ServiceResponse = {
   error?: any;
 };
 
-@ApiTags('Prayer')
-@Controller('prayer')
+@ApiTags('Prayer v1')
+@Controller({ path: 'prayer', version: '1' })
 export class PrayerController {
   constructor(private readonly prayerService: PrayerService) {}
 
@@ -123,9 +123,9 @@ export class PrayerController {
   }
 
   @Get('timings')
-  @ApiOperation({ summary: 'Get daily prayer times', description: 'Upstream-compatible with aladhan.com/v1/timings' })
-  @ApiQuery({ name: 'lat', required: true, description: 'Latitude', example: 23.8103 })
-  @ApiQuery({ name: 'lng', required: true, description: 'Longitude', example: 90.4125 })
+  @ApiOperation({ summary: 'Get daily prayer times by coordinates', description: 'Upstream-compatible with aladhan.com/v1/timings' })
+  @ApiQuery({ name: 'latitude', required: true, description: 'Latitude', example: 23.8103 })
+  @ApiQuery({ name: 'longitude', required: true, description: 'Longitude', example: 90.4125 })
   @ApiQuery({ name: 'method', required: false, schema: { type: 'integer', default: 1 }, example: 2 })
   @ApiQuery({ name: 'school', required: false, schema: { type: 'integer', default: 0 }, example: 1 })
   @ApiQuery({ name: 'latitudeAdjustmentMethod', required: false, schema: { type: 'integer', enum: [0,1,2] }, description: '0=None,1=Middle,2=OneSeventh', example: 1 })
@@ -135,8 +135,8 @@ export class PrayerController {
   @ApiResponse({ status: 400, description: 'Bad Request' })
   async getPrayerTimes(
     @Res() res: Response,
-    @Query('latitude') lat: string,
-    @Query('longitude') lng: string,
+    @Query('latitude') latitude: string,
+    @Query('longitude') longitude: string,
     @Query('date') date?: string,
     @Query('method') method: string = '1',
     @Query('school') school: string = '0',
@@ -144,7 +144,7 @@ export class PrayerController {
     @Query('tune') tune?: string,
     @Query('timezonestring') timezonestring?: string,
   ) {
-    if (!lat || !lng) {
+    if (!latitude || !longitude) {
       return res.status(400).json({
         code: 400,
         status: 'Bad Request',
@@ -155,9 +155,132 @@ export class PrayerController {
     const dateObj = date ? new Date(date) : new Date();
     
     const result = await this.prayerService.getDailyPrayerTimes(
-      parseFloat(lat),
-      parseFloat(lng),
+      parseFloat(latitude),
+      parseFloat(longitude),
       dateObj,
+      parseInt(method),
+      parseInt(school),
+      latitudeAdjustmentMethod ? parseInt(latitudeAdjustmentMethod) : undefined,
+      tune,
+      timezonestring,
+    ) as ServiceResponse;
+    
+    if (result.headers) {
+      Object.entries(result.headers).forEach(([key, value]) => {
+        res.setHeader(key, value);
+      });
+    }
+    if (!res.getHeader('X-DeenMate-Source')) {
+      res.setHeader('X-DeenMate-Source', 'live-sync');
+      res.setHeader('X-DeenMate-Cache', 'miss');
+    }
+    return res.json(result);
+  }
+
+  @Get('timingsByCity')
+  @ApiOperation({ summary: 'Get daily prayer times by city', description: 'Upstream-compatible with aladhan.com/v1/timingsByCity' })
+  @ApiQuery({ name: 'city', required: true, description: 'City name', example: 'Dhaka' })
+  @ApiQuery({ name: 'country', required: true, description: 'Country name', example: 'Bangladesh' })
+  @ApiQuery({ name: 'method', required: false, schema: { type: 'integer', default: 1 }, example: 2 })
+  @ApiQuery({ name: 'school', required: false, schema: { type: 'integer', default: 0 }, example: 1 })
+  @ApiQuery({ name: 'latitudeAdjustmentMethod', required: false, schema: { type: 'integer', enum: [0,1,2] }, description: '0=None,1=Middle,2=OneSeventh', example: 1 })
+  @ApiQuery({ name: 'tune', required: false, description: 'Comma-separated 7 integer minute offsets (Fajr,...,Isha)', example: '1,2,3,4,5,6,7' })
+  @ApiQuery({ name: 'timezonestring', required: false, description: 'IANA timezone', example: 'Asia/Dhaka' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  async getPrayerTimesByCity(
+    @Res() res: Response,
+    @Query('city') city: string,
+    @Query('country') country: string,
+    @Query('date') date?: string,
+    @Query('method') method: string = '1',
+    @Query('school') school: string = '0',
+    @Query('latitudeAdjustmentMethod') latitudeAdjustmentMethod?: string,
+    @Query('tune') tune?: string,
+    @Query('timezonestring') timezonestring?: string,
+  ) {
+    if (!city || !country) {
+      return res.status(400).json({
+        code: 400,
+        status: 'Bad Request',
+        message: 'City and country are required',
+      });
+    }
+    
+    const dateObj = date ? new Date(date) : new Date();
+    
+    const result = await this.prayerService.getPrayerTimesByCity(
+      city,
+      country,
+      dateObj,
+      parseInt(method),
+      parseInt(school),
+      latitudeAdjustmentMethod ? parseInt(latitudeAdjustmentMethod) : undefined,
+      tune,
+      timezonestring,
+    ) as ServiceResponse;
+    
+    if (result.headers) {
+      Object.entries(result.headers).forEach(([key, value]) => {
+        res.setHeader(key, value);
+      });
+    }
+    if (!res.getHeader('X-DeenMate-Source')) {
+      res.setHeader('X-DeenMate-Source', 'live-sync');
+      res.setHeader('X-DeenMate-Cache', 'miss');
+    }
+    return res.json(result);
+  }
+
+  @Get('calendar')
+  @ApiOperation({ summary: 'Get monthly prayer calendar by coordinates', description: 'Upstream-compatible with aladhan.com/v1/calendar' })
+  @ApiQuery({ name: 'latitude', required: true, description: 'Latitude', example: 23.8103 })
+  @ApiQuery({ name: 'longitude', required: true, description: 'Longitude', example: 90.4125 })
+  @ApiQuery({ name: 'month', required: true, description: 'Month (1-12)', example: 9 })
+  @ApiQuery({ name: 'year', required: true, description: 'Year', example: 2025 })
+  @ApiQuery({ name: 'method', required: false, schema: { type: 'integer', default: 1 }, example: 2 })
+  @ApiQuery({ name: 'school', required: false, schema: { type: 'integer', default: 0 }, example: 1 })
+  @ApiQuery({ name: 'latitudeAdjustmentMethod', required: false, schema: { type: 'integer', enum: [0,1,2] }, description: '0=None,1=Middle,2=OneSeventh', example: 1 })
+  @ApiQuery({ name: 'tune', required: false, description: 'Comma-separated 7 integer minute offsets (Fajr,...,Isha)', example: '1,2,3,4,5,6,7' })
+  @ApiQuery({ name: 'timezonestring', required: false, description: 'IANA timezone', example: 'Asia/Dhaka' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  async getPrayerCalendar(
+    @Res() res: Response,
+    @Query('latitude') latitude: string,
+    @Query('longitude') longitude: string,
+    @Query('month') month: string,
+    @Query('year') year: string,
+    @Query('method') method: string = '1',
+    @Query('school') school: string = '0',
+    @Query('latitudeAdjustmentMethod') latitudeAdjustmentMethod?: string,
+    @Query('tune') tune?: string,
+    @Query('timezonestring') timezonestring?: string,
+  ) {
+    if (!latitude || !longitude || !month || !year) {
+      return res.status(400).json({
+        code: 400,
+        status: 'Bad Request',
+        message: 'Latitude, longitude, month, and year are required',
+      });
+    }
+    
+    const monthNum = parseInt(month);
+    const yearNum = parseInt(year);
+    
+    if (isNaN(monthNum) || isNaN(yearNum) || monthNum < 1 || monthNum > 12) {
+      return res.status(400).json({
+        code: 400,
+        status: 'Bad Request',
+        message: 'Invalid month or year',
+      });
+    }
+    
+    const result = await this.prayerService.getPrayerCalendar(
+      parseFloat(latitude),
+      parseFloat(longitude),
+      monthNum,
+      yearNum,
       parseInt(method),
       parseInt(school),
       latitudeAdjustmentMethod ? parseInt(latitudeAdjustmentMethod) : undefined,

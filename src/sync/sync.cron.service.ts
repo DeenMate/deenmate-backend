@@ -87,6 +87,23 @@ export class SyncCronService {
     }
   }
 
+  // Midnight UTC pre-warm to ensure day-start availability
+  @Cron('0 0 * * *')
+  async handlePrayerTimesPreWarmMidnight() {
+    if (!this.isSyncEnabled) {
+      this.logger.log('Prayer times pre-warm (midnight) is disabled');
+      return;
+    }
+
+    this.logger.log('Starting prayer times pre-warm (midnight UTC)...');
+    try {
+      await this.syncMajorCitiesPrayerTimes();
+      this.logger.log('Prayer times pre-warm (midnight UTC) completed successfully');
+    } catch (error) {
+      this.logger.error(`Prayer times pre-warm (midnight UTC) failed: ${error.message}`);
+    }
+  }
+
   private async syncMajorCitiesPrayerTimes() {
     const majorCities = [
       { name: 'Mecca', lat: 21.4225, lng: 39.8262 },

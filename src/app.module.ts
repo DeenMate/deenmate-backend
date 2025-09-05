@@ -4,6 +4,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { DatabaseModule } from './database/database.module';
+import { GoldPriceModule } from '@/modules/finance/gold-price/goldprice.module';
 import { RedisModule } from './redis/redis.module';
 import { CommonModule } from './common/common.module';
 import { QuranModule } from './quran/quran.module';
@@ -22,6 +23,7 @@ import { SyncModule } from './sync/sync.module';
     ScheduleModule.forRoot(),
     TerminusModule,
     DatabaseModule,
+    GoldPriceModule,
     RedisModule,
     CommonModule,
     QuranModule,

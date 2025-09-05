@@ -8,7 +8,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://api.deenmate.com/api/v1",
+      "value": "https://api.deenmate.app/api/v1",
       "type": "string"
     },
     {
@@ -78,14 +78,8 @@
               "host": ["{{baseUrl}}"],
               "path": ["quran", "chapters", "1", "verses"],
               "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "per_page",
-                  "value": "50"
-                }
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "50" }
               ]
             }
           },
@@ -127,10 +121,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["quran", "audio", "1", "1", "1"],
               "query": [
-                {
-                  "key": "quality",
-                  "value": "128kbps"
-                }
+                { "key": "quality", "value": "128kbps" }
               ]
             }
           },
@@ -151,22 +142,10 @@
               "host": ["{{baseUrl}}"],
               "path": ["prayer", "times"],
               "query": [
-                {
-                  "key": "latitude",
-                  "value": "23.8103"
-                },
-                {
-                  "key": "longitude",
-                  "value": "90.4125"
-                },
-                {
-                  "key": "date",
-                  "value": "2025-09-03"
-                },
-                {
-                  "key": "method",
-                  "value": "1"
-                }
+                { "key": "latitude", "value": "23.8103" },
+                { "key": "longitude", "value": "90.4125" },
+                { "key": "date", "value": "2025-09-03" },
+                { "key": "method", "value": "1" }
               ]
             }
           },
@@ -182,26 +161,11 @@
               "host": ["{{baseUrl}}"],
               "path": ["prayer", "calendar"],
               "query": [
-                {
-                  "key": "latitude",
-                  "value": "23.8103"
-                },
-                {
-                  "key": "longitude",
-                  "value": "90.4125"
-                },
-                {
-                  "key": "month",
-                  "value": "9"
-                },
-                {
-                  "key": "year",
-                  "value": "2025"
-                },
-                {
-                  "key": "method",
-                  "value": "1"
-                }
+                { "key": "latitude", "value": "23.8103" },
+                { "key": "longitude", "value": "90.4125" },
+                { "key": "month", "value": "9" },
+                { "key": "year", "value": "2025" },
+                { "key": "method", "value": "1" }
               ]
             }
           },
@@ -217,14 +181,8 @@
               "host": ["{{baseUrl}}"],
               "path": ["prayer", "qibla"],
               "query": [
-                {
-                  "key": "latitude",
-                  "value": "23.8103"
-                },
-                {
-                  "key": "longitude",
-                  "value": "90.4125"
-                }
+                { "key": "latitude", "value": "23.8103" },
+                { "key": "longitude", "value": "90.4125" }
               ]
             }
           },
@@ -239,6 +197,62 @@
               "raw": "{{baseUrl}}/prayer/methods",
               "host": ["{{baseUrl}}"],
               "path": ["prayer", "methods"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Finance Module",
+      "item": [
+        {
+          "name": "Latest Gold/Silver Prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/gold-prices/latest?unit=Gram",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "gold-prices", "latest"],
+              "query": [
+                { "key": "unit", "value": "Gram" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Historical Prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/gold-prices/history?from=2025-09-01&to=2025-09-05&metal=Gold&category=22K&preferredUnit=Vori",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "gold-prices", "history"],
+              "query": [
+                { "key": "from", "value": "2025-09-01" },
+                { "key": "to", "value": "2025-09-05" },
+                { "key": "metal", "value": "Gold" },
+                { "key": "category", "value": "22K" },
+                { "key": "preferredUnit", "value": "Vori" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Sync Gold Prices",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-admin-api-key", "value": "<REPLACE_WITH_KEY>", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/sync/gold-prices",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sync", "gold-prices"]
             }
           },
           "response": []
@@ -284,14 +298,8 @@
               "host": ["{{baseUrl}}"],
               "path": ["hadith", "collections", "1", "books", "1", "hadiths"],
               "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "per_page",
-                  "value": "20"
-                }
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" }
               ]
             }
           },
@@ -307,22 +315,10 @@
               "host": ["{{baseUrl}}"],
               "path": ["hadith", "search"],
               "query": [
-                {
-                  "key": "q",
-                  "value": "intention"
-                },
-                {
-                  "key": "collection",
-                  "value": "1"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "per_page",
-                  "value": "20"
-                }
+                { "key": "q", "value": "intention" },
+                { "key": "collection", "value": "1" },
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" }
               ]
             }
           },
@@ -356,10 +352,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["zakat", "nisab"],
               "query": [
-                {
-                  "key": "currency",
-                  "value": "USD"
-                }
+                { "key": "currency", "value": "USD" }
               ]
             }
           },
@@ -370,10 +363,7 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
@@ -397,10 +387,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["zakat", "gold-price"],
               "query": [
-                {
-                  "key": "currency",
-                  "value": "USD"
-                }
+                { "key": "currency", "value": "USD" }
               ]
             }
           },
@@ -429,10 +416,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["zakat", "history"],
               "query": [
-                {
-                  "key": "userId",
-                  "value": "user123"
-                }
+                { "key": "userId", "value": "user123" }
               ]
             }
           },
@@ -453,10 +437,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["audio", "verse", "1", "1", "1"],
               "query": [
-                {
-                  "key": "quality",
-                  "value": "128kbps"
-                }
+                { "key": "quality", "value": "128kbps" }
               ]
             }
           },
@@ -472,10 +453,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["audio", "chapter", "1", "1"],
               "query": [
-                {
-                  "key": "quality",
-                  "value": "128kbps"
-                }
+                { "key": "quality", "value": "128kbps" }
               ]
             }
           },
@@ -517,26 +495,11 @@
               "host": ["{{baseUrl}}"],
               "path": ["audio", "search"],
               "query": [
-                {
-                  "key": "q",
-                  "value": "test"
-                },
-                {
-                  "key": "reciter",
-                  "value": "1"
-                },
-                {
-                  "key": "quality",
-                  "value": "128kbps"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "per_page",
-                  "value": "20"
-                }
+                { "key": "q", "value": "test" },
+                { "key": "reciter", "value": "1" },
+                { "key": "quality", "value": "128kbps" },
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" }
               ]
             }
           },
@@ -552,10 +515,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["audio", "validate"],
               "query": [
-                {
-                  "key": "url",
-                  "value": "https://example.com/audio.mp3"
-                }
+                { "key": "url", "value": "https://example.com/audio.mp3" }
               ]
             }
           },

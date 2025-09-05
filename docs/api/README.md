@@ -7,8 +7,8 @@ DeenMate API is a comprehensive Islamic application backend that provides access
 ## Base URL
 
 ```
-Production: https://api.deenmate.com/api/v1
-Staging: https://staging-api.deenmate.com/api/v1
+Production: https://api.deenmate.app/api/v1
+Staging: https://staging-api.deenmate.app/api/v1
 Local: http://localhost:3000/api/v1
 ```
 
@@ -391,7 +391,7 @@ npm install @deenmate/api-client
 import { DeenMateAPI } from '@deenmate/api-client';
 
 const api = new DeenMateAPI({
-  baseURL: 'https://api.deenmate.com/api/v1'
+  baseURL: 'https://api.deenmate.app/api/v1'
 });
 
 // Get prayer times
@@ -409,7 +409,7 @@ pip install deenmate-api
 ```python
 from deenmate_api import DeenMateAPI
 
-api = DeenMateAPI(base_url="https://api.deenmate.com/api/v1")
+api = DeenMateAPI(base_url="https://api.deenmate.app/api/v1")
 
 # Get prayer times
 prayer_times = api.prayer.get_times(
@@ -421,13 +421,13 @@ prayer_times = api.prayer.get_times(
 ## Postman Collection
 
 Download the complete Postman collection:
-- [DeenMate API Collection](https://api.deenmate.com/postman/deenmate-api.json)
+- [DeenMate API Collection](https://api.deenmate.app/postman/deenmate-api.json)
 
 ## Support
 
-- **Documentation**: [https://docs.deenmate.com](https://docs.deenmate.com)
-- **API Status**: [https://status.deenmate.com](https://status.deenmate.com)
-- **Support Email**: api-support@deenmate.com
+- **Documentation**: [https://docs.deenmate.app](https://docs.deenmate.app)
+- **API Status**: [https://status.deenmate.app](https://status.deenmate.app)
+- **Support Email**: api-support@deenmate.app
 - **Developer Discord**: [https://discord.gg/deenmate](https://discord.gg/deenmate)
 
 ## Changelog

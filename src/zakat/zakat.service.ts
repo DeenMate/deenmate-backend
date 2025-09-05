@@ -121,26 +121,7 @@ export class ZakatService {
     }
 
     // TODO: Implement actual gold price API integration
-    // For now, return mock data
-    const mockPrices: { [key: string]: number } = {
-      USD: 1950.50,
-      EUR: 1780.25,
-      GBP: 1540.75,
-      SAR: 7315.50,
-      BDT: 213500.00,
-    };
-
-    const goldPrice: GoldPrice = {
-      price: mockPrices[currency] || mockPrices.USD,
-      currency,
-      lastUpdated: new Date().toISOString(),
-      source: 'Mock Data (TODO: Integrate MetalpriceAPI)',
-    };
-
-    // Cache for 30 minutes
-    await this.redis.set(cacheKey, JSON.stringify(goldPrice), 1800);
-    
-    return goldPrice;
+    throw new Error('Gold price API integration not implemented. Please implement MetalpriceAPI integration.');
   }
 
   async getSupportedCurrencies(): Promise<string[]> {
@@ -167,7 +148,6 @@ export class ZakatService {
 
   async saveZakatCalculation(calculation: ZakatCalculation, userId?: string): Promise<any> {
     // TODO: Implement saving zakat calculations to database
-    this.logger.log(`Zakat calculation saved: ${calculation.zakatAmount} ${calculation.currency}`);
-    return { success: true, id: Date.now() };
+    throw new Error('Zakat calculation saving not implemented. Please implement database storage for zakat calculations.');
   }
 }

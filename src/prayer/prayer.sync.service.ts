@@ -4,6 +4,7 @@ import { PrismaService } from '../database/prisma.service';
 import { CommonHttpService } from '../common/common.module';
 import { PrayerMapper, UpstreamCalculationMethod } from './prayer.mapper';
 import { generateHash, generateSyncJobId } from '../common/common.module';
+import { RedisService } from '../redis/redis.service';
 
 export interface PrayerSyncOptions {
   force?: boolean;
@@ -38,6 +39,7 @@ export class PrayerSyncService {
     private readonly httpService: CommonHttpService,
     private readonly mapper: PrayerMapper,
     private readonly configService: ConfigService,
+    private readonly redisService: RedisService,
   ) {}
 
   async syncCalculationMethods(options: PrayerSyncOptions = {}): Promise<PrayerSyncResult> {
@@ -99,7 +101,7 @@ export class PrayerSyncService {
         try {
           const mappedMethod = this.mapper.mapCalculationMethodFromUpstream(method);
           
-          const result = await this.prisma.prayerCalculationMethod.upsert({
+          const result = await (this.prisma as any).prayerCalculationMethod.upsert({
             where: { methodCode: mappedMethod.methodCode },
             update: {
               ...mappedMethod,
@@ -207,6 +209,20 @@ export class PrayerSyncService {
 
       await this.ensureLocationExists(latitude, longitude);
 
+      // Resolve method to a valid FK (default to MWL for method=1)
+      let methodId: number | null = null;
+      try {
+        const mwl = await (this.prisma as any).prayerCalculationMethod.findUnique({ where: { methodCode: 'MWL' } });
+        if (!mwl) {
+          // Ensure methods are present
+          await this.syncCalculationMethods({ force: true });
+        }
+        const resolved = await (this.prisma as any).prayerCalculationMethod.findUnique({ where: { methodCode: 'MWL' } });
+        methodId = resolved ? resolved.id : null;
+      } catch (e) {
+        this.logger.warn(`Unable to resolve prayer method ID (MWL): ${e instanceof Error ? e.message : e}`);
+      }
+
       const dateRange = options.dateRange || this.getDefaultDateRange();
       
       let totalProcessed = 0;
@@ -238,12 +254,12 @@ export class PrayerSyncService {
                 locKey
               );
               
-              const result = await this.prisma.prayerTimes.upsert({
+              const result = await (this.prisma as any).prayerTimes.upsert({
                 where: {
                   locKey_date_method_school: {
                     locKey,
                     date: new Date(dateStr),
-                    method: 1,
+                    method: methodId ?? 1,
                     school: 0,
                   },
                 },
@@ -264,7 +280,7 @@ export class PrayerSyncService {
                 create: {
                   locKey: mappedTimes.locKey,
                   date: mappedTimes.date,
-                  method: mappedTimes.method,
+                  method: methodId ?? mappedTimes.method,
                   school: mappedTimes.school,
                   fajr: mappedTimes.fajr,
                   sunrise: mappedTimes.sunrise,
@@ -280,6 +296,49 @@ export class PrayerSyncService {
                   rawResponse: mappedTimes.rawResponse,
                 },
               });
+
+              // Pre-warm Redis cache with Aladhan-compatible shape
+              try {
+                const cacheKey = `prayer:timings:${latitude}:${longitude}:${dateStr}:${1}:${0}:${1}:${0}:${'auto'}:${0}:${false}`;
+                const aladhanLike = {
+                  code: 200,
+                  status: 'OK',
+                  data: {
+                    timings: {
+                      Fajr: timings.Fajr,
+                      Sunrise: timings.Sunrise,
+                      Dhuhr: timings.Dhuhr,
+                      Asr: timings.Asr,
+                      Sunset: timings.Maghrib,
+                      Maghrib: timings.Maghrib,
+                      Isha: timings.Isha,
+                      Imsak: timings.Imsak || timings.Fajr,
+                      Midnight: timings.Midnight || '',
+                      Firstthird: timings.Firstthird || '',
+                      Lastthird: timings.Lastthird || '',
+                    },
+                    date: {
+                      readable: dateStr,
+                      timestamp: Math.floor(new Date(dateStr).getTime() / 1000).toString(),
+                      gregorian: { date: '', format: '', day: '', weekday: { en: '', ar: '' }, month: { number: 0, en: '', ar: '' }, year: '' },
+                      hijri: { date: '', format: '', day: '', weekday: { en: '', ar: '' }, month: { number: 0, en: '', ar: '' }, year: '' },
+                    },
+                    meta: {
+                      latitude,
+                      longitude,
+                      timezone: 'auto',
+                      method: { id: 1, name: '', params: { Fajr: 0, Isha: 0 }, location: { latitude: 0, longitude: 0 } },
+                      latitudeAdjustmentMethod: '1',
+                      midnightMode: '0',
+                      school: '0',
+                      offset: {},
+                    },
+                  },
+                };
+                await this.redisService.set(cacheKey, JSON.stringify(aladhanLike), 86400);
+              } catch (cacheErr) {
+                this.logger.warn(`Failed to cache prayer timings for ${latitude},${longitude} ${dateStr}: ${cacheErr instanceof Error ? cacheErr.message : cacheErr}`);
+              }
 
               if (result) {
                 totalUpdated++;
@@ -357,12 +416,12 @@ export class PrayerSyncService {
   private async ensureLocationExists(latitude: number, longitude: number): Promise<void> {
     const locKey = generateHash(`${latitude.toFixed(3)},${longitude.toFixed(3)}`);
     
-    const existingLocation = await this.prisma.prayerLocation.findUnique({
+    const existingLocation = await (this.prisma as any).prayerLocation.findUnique({
       where: { locKey },
     });
 
     if (!existingLocation) {
-      await this.prisma.prayerLocation.create({
+      await (this.prisma as any).prayerLocation.create({
         data: {
           locKey,
           lat: latitude,
@@ -390,7 +449,7 @@ export class PrayerSyncService {
   }
 
   private async getLastSyncTime(resource: string): Promise<Date | null> {
-    const lastJob = await this.prisma.syncJobLog.findFirst({
+    const lastJob = await (this.prisma as any).syncJobLog.findFirst({
       where: {
         jobName: `prayer-${resource}`,
         status: { in: ['success', 'partial'] },
@@ -402,7 +461,7 @@ export class PrayerSyncService {
   }
 
   private async getLastSyncTimeForLocation(resource: string, locKey: string): Promise<Date | null> {
-    const lastJob = await this.prisma.syncJobLog.findFirst({
+    const lastJob = await (this.prisma as any).syncJobLog.findFirst({
       where: {
         jobName: `prayer-${resource}`,
         resource: locKey,
@@ -433,7 +492,7 @@ export class PrayerSyncService {
     }
   ): Promise<void> {
     try {
-      await this.prisma.syncJobLog.create({
+      await (this.prisma as any).syncJobLog.create({
         data: {
           jobName,
           resource,

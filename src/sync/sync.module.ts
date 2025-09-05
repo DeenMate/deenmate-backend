@@ -5,8 +5,7 @@ import { CommonModule } from '../common/common.module';
 import { DatabaseModule } from '../database/database.module';
 import { QuranModule } from '../quran/quran.module';
 import { PrayerModule } from '../prayer/prayer.module';
-import { QuranSyncService } from '../quran/quran.sync.service';
-import { PrayerSyncService } from '../prayer/prayer.sync.service';
+import { AudioModule } from '../audio/audio.module';
 import { SyncCronService } from './sync.cron.service';
 import { SyncController } from './sync.controller';
 
@@ -18,16 +17,13 @@ import { SyncController } from './sync.controller';
     DatabaseModule,
     QuranModule,
     PrayerModule,
+    AudioModule,
   ],
   providers: [
-    QuranSyncService,
-    PrayerSyncService,
     SyncCronService,
   ],
   controllers: [SyncController],
   exports: [
-    QuranSyncService,
-    PrayerSyncService,
     SyncCronService,
   ],
 })

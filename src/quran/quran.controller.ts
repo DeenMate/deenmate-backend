@@ -13,8 +13,8 @@ type ServiceResponse = {
   error?: any;
 };
 
-@ApiTags('Quran')
-@Controller('quran')
+@ApiTags('Quran v4')
+@Controller({ path: 'quran', version: '4' })
 export class QuranController {
   constructor(private readonly quranService: QuranService) {}
 
@@ -217,7 +217,7 @@ export class QuranController {
       res.setHeader('X-DeenMate-Source', 'live-sync');
       res.setHeader('X-DeenMate-Cache', 'miss');
     }
-    return res.json(result);
+    return res.json((result as any).data ?? result);
   }
 
   @Get('recitations/:recitationId/by_chapter/:chapterNumber')

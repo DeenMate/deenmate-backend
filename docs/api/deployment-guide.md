@@ -738,7 +738,7 @@ jobs:
       - name: Verify deployment
         run: |
           sleep 30
-          curl -f https://api.deenmate.com/api/v1/health
+          curl -f https://api.deenmate.app/api/v1/health
       
       - name: Notify deployment
         if: always()

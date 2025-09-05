@@ -13,8 +13,8 @@ Welcome to the DeenMate API! This guide will help you get up and running quickly
 ## Base URLs
 
 ```
-Production: https://api.deenmate.com/api/v1
-Staging:   https://staging-api.deenmate.com/api/v1
+Production: https://api.deenmate.app/api/v1
+Staging:   https://staging-api.deenmate.app/api/v1
 Local:     http://localhost:3000/api/v1
 ```
 
@@ -23,7 +23,7 @@ Local:     http://localhost:3000/api/v1
 Let's start with a simple health check to ensure the API is running:
 
 ```bash
-curl https://api.deenmate.com/api/v1/health
+curl https://api.deenmate.app/api/v1/health
 ```
 
 Expected response:
@@ -43,19 +43,19 @@ Expected response:
 ### 1. Get Quran Chapters
 
 ```bash
-curl https://api.deenmate.com/api/v1/quran/chapters
+curl https://api.deenmate.app/api/v1/quran/chapters
 ```
 
 ### 2. Get Prayer Times
 
 ```bash
-curl "https://api.deenmate.com/api/v1/prayer/times?latitude=23.8103&longitude=90.4125&date=2025-09-04"
+curl "https://api.deenmate.app/api/v1/prayer/times?latitude=23.8103&longitude=90.4125&date=2025-09-04"
 ```
 
 ### 3. Calculate Zakat
 
 ```bash
-curl -X POST https://api.deenmate.com/api/v1/zakat/calculate \
+curl -X POST https://api.deenmate.app/api/v1/zakat/calculate \
   -H "Content-Type: application/json" \
   -d '{
     "gold": 1000,
@@ -72,7 +72,7 @@ curl -X POST https://api.deenmate.com/api/v1/zakat/calculate \
 // Using fetch (Node.js 18+ or browser)
 async function getPrayerTimes(lat, lng) {
   const response = await fetch(
-    `https://api.deenmate.com/api/v1/prayer/times?latitude=${lat}&longitude=${lng}`
+    `https://api.deenmate.app/api/v1/prayer/times?latitude=${lat}&longitude=${lng}`
   );
   const data = await response.json();
   return data;
@@ -90,7 +90,7 @@ getPrayerTimes(23.8103, 90.4125)
 import requests
 
 def get_prayer_times(lat, lng):
-    url = "https://api.deenmate.com/api/v1/prayer/times"
+    url = "https://api.deenmate.app/api/v1/prayer/times"
     params = {"latitude": lat, "longitude": lng}
     
     response = requests.get(url, params=params)
@@ -107,7 +107,7 @@ print(result["data"]["prayerTimes"])
 ```php
 <?php
 function getPrayerTimes($lat, $lng) {
-    $url = "https://api.deenmate.com/api/v1/prayer/times";
+    $url = "https://api.deenmate.app/api/v1/prayer/times";
     $params = http_build_query([
         'latitude' => $lat,
         'longitude' => $lng
@@ -127,22 +127,22 @@ echo json_encode($result['data']['prayerTimes'], JSON_PRETTY_PRINT);
 
 #### Get Quran Chapter Verses
 ```bash
-curl "https://api.deenmate.com/api/v1/quran/chapters/1/verses?page=1&per_page=10"
+curl "https://api.deenmate.app/api/v1/quran/chapters/1/verses?page=1&per_page=10"
 ```
 
 #### Get Qibla Direction
 ```bash
-curl "https://api.deenmate.com/api/v1/prayer/qibla?latitude=23.8103&longitude=90.4125"
+curl "https://api.deenmate.app/api/v1/prayer/qibla?latitude=23.8103&longitude=90.4125"
 ```
 
 #### Search Hadiths
 ```bash
-curl "https://api.deenmate.com/api/v1/hadith/search?q=intention&page=1&per_page=20"
+curl "https://api.deenmate.app/api/v1/hadith/search?q=intention&page=1&per_page=20"
 ```
 
 #### Get Audio Metadata
 ```bash
-curl "https://api.deenmate.com/api/v1/audio/verse/1/1/1?quality=128kbps"
+curl "https://api.deenmate.app/api/v1/audio/verse/1/1/1?quality=128kbps"
 ```
 
 ## Response Format
@@ -234,9 +234,9 @@ curl http://localhost:3000/api/v1/health
 
 ## Need Help?
 
-- **Documentation**: [https://docs.deenmate.com](https://docs.deenmate.com)
-- **API Status**: [https://status.deenmate.com](https://status.deenmate.com)
-- **Support Email**: api-support@deenmate.com
+- **Documentation**: [https://docs.deenmate.app](https://docs.deenmate.app)
+- **API Status**: [https://status.deenmate.app](https://status.deenmate.app)
+- **Support Email**: api-support@deenmate.app
 - **Developer Discord**: [https://discord.gg/deenmate](https://discord.gg/deenmate)
 
 ## SDKs (Coming Soon)

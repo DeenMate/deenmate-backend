@@ -237,3 +237,21 @@ model SyncJobLog {
   @@index([resource])
   @@map("sync_job_logs")
 }
+
+// Finance - Gold/Silver Prices (Append-only)
+model GoldPrice {
+  id         String   @id @default(uuid())
+  metal      String   // "Gold" | "Silver"
+  category   String   // e.g., 22K, 21K, 18K, Traditional
+  unit       String   // e.g., Vori, Gram
+  price      Decimal  @db.Decimal(12, 2)
+  currency   String   // e.g., BDT
+  change     String?  // "Up" | "Down" | "Unchanged"
+  source     String
+  fetchedAt  DateTime // when scraped from source
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([metal, category, unit, fetchedAt])
+  @@index([fetchedAt])
+  @@map("gold_prices")
+}
