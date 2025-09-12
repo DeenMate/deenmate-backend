@@ -38,17 +38,17 @@ export function parsePaginationOptions(
     page: 1,
     perPage: 50,
     maxPerPage: 100,
-  }
+  },
 ): { page: number; perPage: number; skip: number; take: number } {
   const page = Math.max(1, options.page || defaults.page);
   const perPage = Math.min(
     Math.max(1, options.perPage || defaults.perPage),
-    defaults.maxPerPage
+    defaults.maxPerPage,
   );
-  
+
   const skip = (page - 1) * perPage;
   const take = perPage;
-  
+
   return { page, perPage, skip, take };
 }
 
@@ -58,10 +58,10 @@ export function parsePaginationOptions(
 export function createPaginationMeta(
   page: number,
   perPage: number,
-  total: number
+  total: number,
 ): PaginationMeta {
   const totalPages = Math.ceil(total / perPage);
-  
+
   return {
     page,
     perPage,
@@ -77,14 +77,14 @@ export function createPaginationMeta(
  */
 export function paginateArray<T>(
   array: T[],
-  options: PaginationOptions
+  options: PaginationOptions,
 ): PaginationResult<T> {
   const { page, perPage, skip, take } = parsePaginationOptions(options);
-  
+
   const total = array.length;
   const paginatedData = array.slice(skip, skip + take);
   const pagination = createPaginationMeta(page, perPage, total);
-  
+
   return {
     data: paginatedData,
     pagination,
@@ -97,7 +97,7 @@ export function paginateArray<T>(
 export function createUpstreamPaginationResponse<T>(
   data: T[],
   pagination: PaginationMeta,
-  upstreamFormat?: any
+  upstreamFormat?: any,
 ): any {
   if (upstreamFormat) {
     return {
@@ -113,10 +113,10 @@ export function createUpstreamPaginationResponse<T>(
       },
     };
   }
-  
+
   return {
     code: 200,
-    status: 'OK',
+    status: "OK",
     data: data,
     pagination: {
       page: pagination.page,

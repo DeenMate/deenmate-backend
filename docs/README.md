@@ -1,14 +1,18 @@
 # Documentation Index
 
-This repo separates day-to-day project documents from long-lived reference docs.
+## 📚 **Primary Documentation**
 
-- Project docs (plans, boards, todos, sprint notes): see [`docs/backend/project/`](./backend/project/)
-- Reference docs (API specs, guides, env, observability): see [`docs/backend/reference/`](./backend/reference/)
+**⚠️ IMPORTANT**: This project has **TWO** single sources of truth:
 
-Quick links:
-- Project tracking board: [`docs/backend/project/PROJECT_TRACKING.md`](./backend/project/PROJECT_TRACKING.md)
-- TODO: [`docs/backend/project/TODO.md`](./backend/project/TODO.md)
-- OpenAPI (live spec file): [`docs/api/openapi.yaml`](./api/openapi.yaml)
-- Quickstart: [`docs/api/quickstart.md`](./api/quickstart.md)
-- Deployment guide: [`docs/api/deployment-guide.md`](./api/deployment-guide.md)
+1. **[PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md)** - Comprehensive project context, architecture, and development guidelines
+2. **[PROJECT_STATUS.md](../PROJECT_STATUS.md)** - Project tracking, sprint management, module status, and development progress
+
+## 📁 **Remaining Documentation**
+
+### **API Specification**
+- OpenAPI specification: [`docs/api/openapi.yaml`](./api/openapi.yaml) - Complete API documentation for testing and integration
+
+---
+
+**Note**: All other documentation has been consolidated into the two primary documents to eliminate redundancy and confusion.
 

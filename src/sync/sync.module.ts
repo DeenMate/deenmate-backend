@@ -1,14 +1,14 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ScheduleModule } from '@nestjs/schedule';
-import { CommonModule } from '../common/common.module';
-import { DatabaseModule } from '../database/database.module';
-import { QuranModule } from '../quran/quran.module';
-import { PrayerModule } from '../prayer/prayer.module';
-import { QuranSyncService } from '../quran/quran.sync.service';
-import { PrayerSyncService } from '../prayer/prayer.sync.service';
-import { SyncCronService } from './sync.cron.service';
-import { SyncController } from './sync.controller';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { ScheduleModule } from "@nestjs/schedule";
+import { CommonModule } from "../common/common.module";
+import { DatabaseModule } from "../database/database.module";
+import { AdminAuthModule } from "../modules/admin/auth/admin-auth.module";
+import { QuranModule } from "../modules/quran/quran.module";
+import { PrayerModule } from "../modules/prayer/prayer.module";
+import { AudioModule } from "../modules/audio/audio.module";
+import { SyncCronService } from "./sync.cron.service";
+import { SyncController } from "./sync.controller";
 
 @Module({
   imports: [
@@ -16,19 +16,13 @@ import { SyncController } from './sync.controller';
     ScheduleModule,
     CommonModule,
     DatabaseModule,
+    AdminAuthModule,
     QuranModule,
     PrayerModule,
+    AudioModule,
   ],
-  providers: [
-    QuranSyncService,
-    PrayerSyncService,
-    SyncCronService,
-  ],
+  providers: [SyncCronService],
   controllers: [SyncController],
-  exports: [
-    QuranSyncService,
-    PrayerSyncService,
-    SyncCronService,
-  ],
+  exports: [SyncCronService],
 })
 export class SyncModule {}

@@ -3,7 +3,7 @@
  */
 
 export interface UpstreamCompatibilityOptions {
-  compat?: 'upstream' | 'native';
+  compat?: "upstream" | "native";
   includeSource?: boolean;
   includeMetadata?: boolean;
 }
@@ -13,25 +13,29 @@ export interface UpstreamCompatibilityOptions {
  */
 export function transformToUpstreamFormat<T>(
   data: T,
-  options: UpstreamCompatibilityOptions = {}
+  options: UpstreamCompatibilityOptions = {},
 ): any {
-  const { compat = 'upstream', includeSource = true, includeMetadata = true } = options;
-  
-  if (compat === 'native') {
+  const {
+    compat = "upstream",
+    includeSource = true,
+    includeMetadata = true,
+  } = options;
+
+  if (compat === "native") {
     return data;
   }
-  
+
   // For upstream compatibility, we need to transform the data structure
   // This is a placeholder - actual transformations will be implemented per endpoint
   let transformed = { ...data };
-  
+
   if (includeSource) {
     transformed = {
       ...transformed,
-      source: 'deenmate',
+      source: "deenmate",
     };
   }
-  
+
   if (includeMetadata) {
     transformed = {
       ...transformed,
@@ -41,7 +45,7 @@ export function transformToUpstreamFormat<T>(
       },
     };
   }
-  
+
   return transformed;
 }
 
@@ -49,17 +53,19 @@ export function transformToUpstreamFormat<T>(
  * Check if response should be in upstream format
  */
 export function shouldUseUpstreamFormat(compat?: string): boolean {
-  return compat === 'upstream' || compat === undefined;
+  return compat === "upstream" || compat === undefined;
 }
 
 /**
  * Add DeenMate source header to response
  */
-export function addSourceHeader(headers: Record<string, string> = {}): Record<string, string> {
+export function addSourceHeader(
+  headers: Record<string, string> = {},
+): Record<string, string> {
   return {
     ...headers,
-    'X-DeenMate-Source': 'live-sync',
-    'X-DeenMate-Version': '1.0.0',
+    "X-DeenMate-Source": "live-sync",
+    "X-DeenMate-Version": "1.0.0",
   };
 }
 
@@ -68,20 +74,20 @@ export function addSourceHeader(headers: Record<string, string> = {}): Record<st
  */
 export function transformErrorToUpstreamFormat(
   error: any,
-  compat?: string
+  compat?: string,
 ): any {
   if (shouldUseUpstreamFormat(compat)) {
     return {
       code: error.status || 500,
-      status: 'error',
-      message: error.message || 'Internal server error',
+      status: "error",
+      message: error.message || "Internal server error",
       data: null,
     };
   }
-  
+
   return {
     error: true,
-    message: error.message || 'Internal server error',
+    message: error.message || "Internal server error",
     statusCode: error.status || 500,
     timestamp: new Date().toISOString(),
   };
@@ -93,7 +99,7 @@ export function transformErrorToUpstreamFormat(
 export function transformSuccessToUpstreamFormat<T>(
   data: T,
   compat?: string,
-  upstreamFormat?: any
+  upstreamFormat?: any,
 ): any {
   if (shouldUseUpstreamFormat(compat)) {
     // If we have the original upstream format, use it as a template
@@ -101,18 +107,18 @@ export function transformSuccessToUpstreamFormat<T>(
       return {
         ...upstreamFormat,
         data: data,
-        source: 'deenmate',
+        source: "deenmate",
       };
     }
-    
+
     // Default upstream-compatible format
     return {
       code: 200,
-      status: 'OK',
+      status: "OK",
       data: data,
-      source: 'deenmate',
+      source: "deenmate",
     };
   }
-  
+
   return data;
 }

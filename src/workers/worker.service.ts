@@ -1,16 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Queue, Worker, Job } from 'bullmq';
-import { RedisService } from '../redis/redis.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { Job } from "bullmq";
+import { Queue } from "bullmq";
+import { RedisService } from "../redis/redis.service";
 
 export interface SyncJob {
-  type: 'quran' | 'prayer' | 'hadith' | 'zakat' | 'audio';
-  action: 'sync' | 'update' | 'cleanup';
+  type: "quran" | "prayer" | "hadith" | "zakat" | "audio";
+  action: "sync" | "update" | "cleanup";
   data?: any;
   priority?: number;
 }
 
 export interface CacheWarmJob {
-  type: 'quran' | 'prayer' | 'hadith' | 'zakat' | 'audio';
+  type: "quran" | "prayer" | "hadith" | "zakat" | "audio";
   keys: string[];
   priority?: number;
 }
@@ -28,61 +29,58 @@ export class WorkerService {
   private async initializeQueues() {
     try {
       // Initialize sync queue
-      this.syncQueue = new Queue('sync-queue', {
+      this.syncQueue = new Queue("sync-queue", {
         connection: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379'),
+          host: process.env.REDIS_HOST || "localhost",
+          port: parseInt(process.env.REDIS_PORT || "6379"),
         },
       });
 
       // Initialize cache warm queue
-      this.cacheQueue = new Queue('cache-queue', {
+      this.cacheQueue = new Queue("cache-queue", {
         connection: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379'),
+          host: process.env.REDIS_HOST || "localhost",
+          port: parseInt(process.env.REDIS_PORT || "6379"),
         },
       });
 
-      this.logger.log('Worker queues initialized successfully');
+      this.logger.log("Worker queues initialized successfully");
     } catch (error) {
-      this.logger.error('Failed to initialize worker queues:', error);
+      this.logger.error("Failed to initialize worker queues:", error);
     }
   }
 
   async addSyncJob(job: SyncJob): Promise<Job> {
     try {
-      const addedJob = await this.syncQueue.add(
-        job.type,
-        job,
-        {
-          priority: job.priority || 5,
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
-        }
-      );
+      const addedJob = await this.syncQueue.add(job.type, job, {
+        priority: job.priority || 5,
+        attempts: 3,
+        backoff: {
+          type: "exponential",
+          delay: 2000,
+        },
+      });
 
-      this.logger.log(`Sync job added: ${job.type}:${job.action} (ID: ${addedJob.id})`);
+      this.logger.log(
+        `Sync job added: ${job.type}:${job.action} (ID: ${addedJob.id})`,
+      );
       return addedJob;
     } catch (error) {
-      this.logger.error(`Failed to add sync job: ${job.type}:${job.action}`, error);
+      this.logger.error(
+        `Failed to add sync job: ${job.type}:${job.action}`,
+        error,
+      );
       throw error;
     }
   }
 
   async addCacheWarmJob(job: CacheWarmJob): Promise<Job> {
     try {
-      const addedJob = await this.cacheQueue.add(
-        'warm-cache',
-        job,
-        {
-          priority: job.priority || 3,
-          attempts: 2,
-          delay: 5000, // 5 second delay
-        }
-      );
+      const addedJob = await this.cacheQueue.add("warm-cache", job, {
+        priority: job.priority || 3,
+        attempts: 2,
+        delay: 5000, // 5 second delay
+      });
 
       this.logger.log(`Cache warm job added: ${job.type} (ID: ${addedJob.id})`);
       return addedJob;
@@ -105,16 +103,16 @@ export class WorkerService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      this.logger.error('Failed to get queue stats:', error);
-      return { error: 'Failed to get queue stats' };
+      this.logger.error("Failed to get queue stats:", error);
+      return { error: "Failed to get queue stats" };
     }
   }
 
-  async clearQueue(queueName: 'sync' | 'cache'): Promise<boolean> {
+  async clearQueue(queueName: "sync" | "cache"): Promise<boolean> {
     try {
-      const queue = queueName === 'sync' ? this.syncQueue : this.cacheQueue;
+      const queue = queueName === "sync" ? this.syncQueue : this.cacheQueue;
       await queue.obliterate();
-      
+
       this.logger.log(`${queueName} queue cleared successfully`);
       return true;
     } catch (error) {
@@ -123,21 +121,26 @@ export class WorkerService {
     }
   }
 
-  async retryFailedJobs(queueName: 'sync' | 'cache'): Promise<number> {
+  async retryFailedJobs(queueName: "sync" | "cache"): Promise<number> {
     try {
-      const queue = queueName === 'sync' ? this.syncQueue : this.cacheQueue;
+      const queue = queueName === "sync" ? this.syncQueue : this.cacheQueue;
       const failedJobs = await queue.getFailed();
-      
+
       let retryCount = 0;
       for (const job of failedJobs) {
         await job.retry();
         retryCount++;
       }
-      
-      this.logger.log(`${retryCount} failed jobs retried in ${queueName} queue`);
+
+      this.logger.log(
+        `${retryCount} failed jobs retried in ${queueName} queue`,
+      );
       return retryCount;
     } catch (error) {
-      this.logger.error(`Failed to retry failed jobs in ${queueName} queue:`, error);
+      this.logger.error(
+        `Failed to retry failed jobs in ${queueName} queue:`,
+        error,
+      );
       return 0;
     }
   }
@@ -146,29 +149,32 @@ export class WorkerService {
     try {
       // Schedule daily Quran sync at 2 AM
       await this.syncQueue.add(
-        'quran',
-        { type: 'quran', action: 'sync', priority: 1 },
+        "quran",
+        { type: "quran", action: "sync", priority: 1 },
         {
           repeat: {
-            pattern: '0 2 * * *', // Daily at 2 AM
+            pattern: "0 2 * * *", // Daily at 2 AM
           },
-        }
+        },
       );
 
       // Schedule cache warming every 6 hours
       await this.cacheQueue.add(
-        'warm-cache',
-        { type: 'all', keys: ['quran:chapters', 'prayer:methods', 'hadith:collections'] },
+        "warm-cache",
+        {
+          type: "all",
+          keys: ["quran:chapters", "prayer:methods", "hadith:collections"],
+        },
         {
           repeat: {
-            pattern: '0 */6 * * *', // Every 6 hours
+            pattern: "0 */6 * * *", // Every 6 hours
           },
-        }
+        },
       );
 
-      this.logger.log('Recurring jobs scheduled successfully');
+      this.logger.log("Recurring jobs scheduled successfully");
     } catch (error) {
-      this.logger.error('Failed to schedule recurring jobs:', error);
+      this.logger.error("Failed to schedule recurring jobs:", error);
     }
   }
 }

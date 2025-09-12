@@ -23,24 +23,24 @@ info:
     - Premium Tier: 5000 requests per minute per user
   
     ## Support
-    - Documentation: https://docs.deenmate.com
-    - API Status: https://status.deenmate.com
-    - Support Email: api-support@deenmate.com
+    - Documentation: https://docs.deenmate.app
+    - API Status: https://status.deenmate.app
+    - Support Email: api-support@deenmate.app
     - Developer Discord: https://discord.gg/deenmate
   
   version: 1.0.0
   contact:
     name: DeenMate API Support
-    email: api-support@deenmate.com
-    url: https://docs.deenmate.com
+    email: api-support@deenmate.app
+    url: https://docs.deenmate.app
   license:
     name: MIT License
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: https://api.deenmate.com/api/v1
+  - url: https://api.deenmate.app/api/v1
     description: Production server
-  - url: https://staging-api.deenmate.com/api/v1
+  - url: https://staging-api.deenmate.app/api/v1
     description: Staging server
   - url: http://localhost:3000/api/v1
     description: Local development server
@@ -56,11 +56,101 @@ tags:
     description: Zakat calculations and market values
   - name: Audio
     description: Islamic audio content and metadata
+  - name: Finance
+    description: Gold and Silver prices (Bangladesh)
   - name: Health
     description: API health and status endpoints
 
 paths:
   /health:
+
+  /finance/gold-prices/latest:
+    get:
+      tags:
+        - Finance
+      summary: Latest gold and silver prices (Bangladesh)
+      parameters:
+        - name: unit
+          in: query
+          description: Preferred unit to convert results to
+          schema:
+            type: string
+            enum: [Gram, Vori]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GoldPriceLatest'
+
+  /finance/gold-prices/history:
+    get:
+      tags:
+        - Finance
+      summary: Historical gold and silver prices (Bangladesh)
+      parameters:
+        - name: from
+          in: query
+          description: ISO date (inclusive)
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: ISO date (inclusive)
+          schema:
+            type: string
+            format: date
+        - name: metal
+          in: query
+          schema:
+            type: string
+            enum: [Gold, Silver]
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: 22K, 21K, 18K, Traditional, etc.
+        - name: unit
+          in: query
+          schema:
+            type: string
+            enum: [Gram, Vori]
+          description: Stored unit filter
+        - name: preferredUnit
+          in: query
+          schema:
+            type: string
+            enum: [Gram, Vori]
+          description: Convert results to this unit
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GoldPriceHistory'
+
+  /admin/sync/gold-prices:
+    post:
+      tags:
+        - Finance
+      summary: Manually trigger gold/silver price scraping (Admin)
+      responses:
+        '201':
+          description: Triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inserted:
+                    type: integer
     get:
       tags:
         - Health
@@ -1040,6 +1130,35 @@ paths:
 
 components:
   schemas:
+    GoldPriceLatest:
+      type: object
+      properties:
+        metal:
+          type: string
+          enum: [Gold, Silver]
+        category:
+          type: string
+        unit:
+          type: string
+          enum: [Gram, Vori]
+        price:
+          type: number
+        currency:
+          type: string
+          example: BDT
+        change:
+          type: string
+          nullable: true
+          enum: [Up, Down, Unchanged]
+        fetchedAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+          example: https://www.bajus.org/gold-price
+    GoldPriceHistory:
+      allOf:
+        - $ref: '#/components/schemas/GoldPriceLatest'
     # Common Response Schemas
     BaseResponse:
       type: object
