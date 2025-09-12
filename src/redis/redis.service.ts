@@ -1,19 +1,20 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import Redis from 'ioredis';
+import { OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import Redis from "ioredis";
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private redis: Redis;
 
   async onModuleInit() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-    
+    this.redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+
     // Test connection
     try {
       await this.redis.ping();
-      console.log('Redis connected successfully');
+      console.log("Redis connected successfully");
     } catch (error) {
-      console.error('Redis connection failed:', error);
+      console.error("Redis connection failed:", error);
     }
   }
 
@@ -27,7 +28,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return await this.redis.get(key);
   }
 
-  async set(key: string, value: string, ttl?: number): Promise<'OK'> {
+  async set(key: string, value: string, ttl?: number): Promise<"OK"> {
     if (ttl) {
       return await this.redis.setex(key, ttl, value);
     }
@@ -48,14 +49,47 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   // Invalidate all keys by prefix (use carefully)
   async invalidateByPrefix(prefix: string): Promise<number> {
-    let cursor = '0';
+    let cursor = "0";
     let total = 0;
     do {
-      const res = await this.redis.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 500);
+      const res = await this.redis.scan(
+        cursor,
+        "MATCH",
+        `${prefix}*`,
+        "COUNT",
+        500,
+      );
       cursor = res[0];
       const keys: string[] = res[1] as any;
-      if (keys.length) { total += await this.redis.del(...keys); }
-    } while (cursor !== '0');
+      if (keys.length) {
+        total += await this.redis.del(...keys);
+      }
+    } while (cursor !== "0");
     return total;
+  }
+
+  // Additional Redis methods for security features
+  async setex(key: string, ttl: number, value: string): Promise<"OK"> {
+    return await this.redis.setex(key, ttl, value);
+  }
+
+  async incr(key: string): Promise<number> {
+    return await this.redis.incr(key);
+  }
+
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    return await this.redis.sadd(key, ...members);
+  }
+
+  async srem(key: string, ...members: string[]): Promise<number> {
+    return await this.redis.srem(key, ...members);
+  }
+
+  async smembers(key: string): Promise<string[]> {
+    return await this.redis.smembers(key);
+  }
+
+  async keys(pattern: string): Promise<string[]> {
+    return await this.redis.keys(pattern);
   }
 }

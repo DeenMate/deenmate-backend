@@ -255,3 +255,161 @@ model GoldPrice {
   @@index([fetchedAt])
   @@map("gold_prices")
 }
+
+// Hadith Module - Sunnah.com Integration
+model HadithCollection {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique // API slug (bukhari, muslim, etc.)
+  titleEn       String   @map("title_en")
+  titleBn       String?  @map("title_bn") // Bangla translation
+  titleAr       String?  @map("title_ar") // Arabic title
+  totalHadith   Int?     @map("total_hadith")
+  hasBooks      Boolean  @default(false) @map("has_books")
+  // Sync metadata
+  source        String   @default("sunnah.com") @map("source")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  syncStatus    String   @default("pending") @map("sync_status") // pending | in_progress | ok | failed
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  books         HadithBook[]
+  hadiths       Hadith[]
+
+  @@index([name])
+  @@index([syncStatus])
+  @@map("hadith_collections")
+}
+
+model HadithBook {
+  id            Int      @id @default(autoincrement())
+  collectionId  Int      @map("collection_id")
+  number        Int      // Book number from API
+  titleEn       String   @map("title_en")
+  titleBn       String?  @map("title_bn") // Bangla translation
+  titleAr       String?  @map("title_ar") // Arabic title
+  totalHadith   Int?     @map("total_hadith")
+  // Sync metadata
+  source        String   @default("sunnah.com") @map("source")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  collection    HadithCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  hadiths       Hadith[]
+
+  @@unique([collectionId, number])
+  @@index([collectionId])
+  @@map("hadith_books")
+}
+
+model Hadith {
+  id            Int      @id @default(autoincrement())
+  collectionId  Int      @map("collection_id")
+  bookId        Int?     @map("book_id") // null if collection doesn't have books
+  hadithNumber  String   @map("hadith_number") // Sunnah.com reference
+  textAr        String   @map("text_ar") // Arabic text
+  textEn        String   @map("text_en") // English text
+  textBn        String?  @map("text_bn") // Bangla translation
+  grades        Json?    // Raw grades array from API
+  refs          Json?    // Reference info from API
+  narrator      String?  // Narrator if provided
+  isVerifiedBn  Boolean  @default(false) @map("is_verified_bn") // Human review status for Bangla
+  // Sync metadata
+  source        String   @default("sunnah.com") @map("source")
+  lastUpdatedAt DateTime @default(now()) @map("last_updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  collection    HadithCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  book          HadithBook? @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, hadithNumber])
+  @@index([collectionId])
+  @@index([bookId])
+  @@index([hadithNumber])
+  @@map("hadith_items")
+}
+
+// Translation Queue for Bangla translations
+model TranslationJob {
+  id            Int      @id @default(autoincrement())
+  hadithId      Int      @map("hadith_id")
+  text          String   // Text to translate
+  sourceLang    String   @default("en") @map("source_lang")
+  targetLang    String   @default("bn") @map("target_lang")
+  status        String   @default("pending") // pending | processing | completed | failed
+  translatedText String? @map("translated_text")
+  error         String?
+  retryCount    Int      @default(0) @map("retry_count")
+  maxRetries    Int      @default(3) @map("max_retries")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  completedAt   DateTime? @map("completed_at")
+
+  @@index([status])
+  @@index([hadithId])
+  @@index([createdAt])
+  @@map("translation_jobs")
+}
+
+// Admin Authentication
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String?  @map("first_name")
+  lastName     String?  @map("last_name")
+  role         String   @default("admin") // admin | super_admin | editor | viewer
+  permissions  String[] @default([]) // Array of permission strings
+  isActive     Boolean  @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Audit logs
+  auditLogs    AdminAuditLog[]
+
+  @@map("admin_users")
+}
+
+model AdminAuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  action    String   // CREATE, READ, UPDATE, DELETE, LOGIN, LOGOUT, SYNC, etc.
+  resource  String   // quran, hadith, prayer, finance, audio, user, etc.
+  resourceId String? @map("resource_id") // ID of the affected resource
+  details   Json?    // Additional details about the action
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_audit_logs")
+}
+
+// Zakat Module - Calculation Storage
+model ZakatCalculation {
+  id              Int      @id @default(autoincrement())
+  userId          String?  @map("user_id") // Optional user ID for user-specific calculations
+  gold            Decimal  @db.Decimal(10, 2) // Gold amount in grams
+  silver          Decimal  @db.Decimal(10, 2) // Silver amount in grams
+  cash            Decimal  @db.Decimal(10, 2) // Cash amount
+  investments     Decimal  @db.Decimal(10, 2) // Investment amount
+  other           Decimal  @db.Decimal(10, 2) // Other assets amount
+  currency        String   @default("USD") // Currency code
+  totalAssets     Decimal  @db.Decimal(10, 2) @map("total_assets") // Total calculated assets
+  nisabThreshold  Decimal  @db.Decimal(10, 2) @map("nisab_threshold") // Nisab threshold for the currency
+  zakatAmount     Decimal  @db.Decimal(10, 2) @map("zakat_amount") // Calculated zakat amount
+  isZakatable     Boolean  @default(false) @map("is_zakatable") // Whether assets exceed nisab
+  calculationDate DateTime @default(now()) @map("calculation_date")
+  goldPrice       Decimal? @db.Decimal(10, 2) @map("gold_price") // Gold price used in calculation
+  silverPrice     Decimal? @db.Decimal(10, 2) @map("silver_price") // Silver price used in calculation
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([calculationDate])
+  @@index([currency])
+  @@map("zakat_calculations")
+}

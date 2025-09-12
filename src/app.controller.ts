@@ -1,12 +1,13 @@
 import { Controller, Get } from "@nestjs/common";
 import {
-  HealthCheck,
   HealthCheckService,
-  HttpHealthIndicator,
+  HttpHealthIndicator} from "@nestjs/terminus";
+import {
+  HealthCheck
 } from "@nestjs/terminus";
 import { RedisService } from "./redis/redis.service";
 
-@Controller({ path: '', version: '4' })
+@Controller({ path: "", version: "4" })
 export class AppController {
   constructor(
     private health: HealthCheckService,
@@ -30,7 +31,7 @@ export class AppController {
         const result = await this.redis.ping();
         return {
           redis: {
-            status: result === 'PONG' ? 'up' : 'down',
+            status: result === "PONG" ? "up" : "down",
           },
         };
       },

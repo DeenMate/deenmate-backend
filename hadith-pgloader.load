@@ -1,0 +1,30 @@
+LOAD DATABASE
+     FROM      mysql://root:root@127.0.0.1/hadith
+     INTO      postgresql://postgres:postgres@127.0.0.1:5432/deenmate
+
+ WITH include drop, create no tables, preserve index names, batch rows = 10000,
+      workers = 4, concurrency = 2
+
+ SET work_mem to '256MB', maintenance_work_mem to '512MB'
+
+ CAST type datetime to timestamptz using zero-dates-to-null,
+      type date to date using zero-dates-to-null
+
+ BEFORE LOAD DO
+ $$ create temporary table if not exists staging.hadith_raw_tmp (like staging.hadith_raw including all) $$,
+ $$ truncate table staging.hadith_raw $$
+
+ LOAD TABLES
+     include only table names matching 'HadithTable'
+     target table staging.hadith_raw
+     
+     fields terminated by ','
+
+     ALTER SCHEMA 'hadith'   RENAME TO 'public'
+     
+     BEFORE LOAD DO
+        $$ truncate table staging.hadith_raw_tmp $$
+     
+     
+     )
+; 

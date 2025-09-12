@@ -1,16 +1,24 @@
-import { Controller, Post, Get, Query, Res, HttpStatus, UseGuards } from '@nestjs/common';
-import { Response } from 'express';
-import { ApiTags } from '@nestjs/swagger';
-import { SyncCronService } from './sync.cron.service';
-import { QuranSyncService } from '../quran/quran.sync.service';
-import { PrayerSyncService } from '../prayer/prayer.sync.service';
-import { AudioSyncService } from '../audio/audio.sync.service';
-import { AudioSeedService } from '../audio/audio.seed.service';
-import { AdminApiKeyGuard } from '../common/guards/admin-api-key.guard';
+import {
+  Controller,
+  Post,
+  Get,
+  Query,
+  Res,
+  HttpStatus,
+  UseGuards,
+} from "@nestjs/common";
+import { Response } from "express";
+import { ApiTags } from "@nestjs/swagger";
+import { SyncCronService } from "./sync.cron.service";
+import { QuranSyncService } from "../modules/quran/quran.sync.service";
+import { PrayerSyncService } from "../modules/prayer/prayer.sync.service";
+import { AudioSyncService } from "../modules/audio/audio.sync.service";
+import { AudioSeedService } from "../modules/audio/audio.seed.service";
+import { JwtAuthGuard } from "../modules/admin/guards/jwt-auth.guard";
 
-@ApiTags('Admin v4')
-@Controller({ path: 'admin/sync', version: '4' })
-@UseGuards(AdminApiKeyGuard)
+@ApiTags("Admin v4")
+@Controller({ path: "admin/sync", version: "4" })
+@UseGuards(JwtAuthGuard)
 export class SyncController {
   constructor(
     private readonly syncCronService: SyncCronService,
@@ -20,24 +28,31 @@ export class SyncController {
     private readonly audioSeedService: AudioSeedService,
   ) {}
 
-  @Post('quran')
+  @Post("quran")
   async syncQuran(
     @Res() res: Response,
-    @Query('force') force?: string,
-    @Query('dryRun') dryRun?: string,
+    @Query("force") force?: string,
+    @Query("dryRun") dryRun?: string,
   ) {
     try {
-      const forceSync = force === 'true';
-      const isDryRun = dryRun === 'true';
+      const forceSync = force === "true";
+      const isDryRun = dryRun === "true";
 
       if (isDryRun) {
-        const chaptersResult = await this.quranSyncService.syncChapters({ dryRun: true });
-        const versesResult = await this.quranSyncService.syncVerses({ dryRun: true });
-        const translationsResult = await this.quranSyncService.syncTranslationResources({ dryRun: true });
+        const chaptersResult = await this.quranSyncService.syncChapters({
+          dryRun: true,
+        });
+        const versesResult = await this.quranSyncService.syncVerses({
+          dryRun: true,
+        });
+        const translationsResult =
+          await this.quranSyncService.syncTranslationResources({
+            dryRun: true,
+          });
 
         return res.status(HttpStatus.OK).json({
           success: true,
-          message: 'Quran sync dry run completed',
+          message: "Quran sync dry run completed",
           results: {
             chapters: chaptersResult,
             verses: versesResult,
@@ -50,41 +65,42 @@ export class SyncController {
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Quran sync completed successfully',
+        message: "Quran sync completed successfully",
         results: result,
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Quran sync failed',
+        message: "Quran sync failed",
         error: error.message,
       });
     }
   }
 
-  @Post('prayer')
+  @Post("prayer")
   async syncPrayer(
     @Res() res: Response,
-    @Query('force') force?: string,
-    @Query('dryRun') dryRun?: string,
+    @Query("force") force?: string,
+    @Query("dryRun") dryRun?: string,
   ) {
     try {
-      const forceSync = force === 'true';
-      const isDryRun = dryRun === 'true';
+      const forceSync = force === "true";
+      const isDryRun = dryRun === "true";
 
       if (isDryRun) {
-        const methodsResult = await this.prayerSyncService.syncCalculationMethods({ dryRun: true });
-        
+        const methodsResult =
+          await this.prayerSyncService.syncCalculationMethods({ dryRun: true });
+
         // Dry run for prayer times (just one city)
         const prayerTimesResult = await this.prayerSyncService.syncPrayerTimes(
           21.4225, // Mecca
           39.8262,
-          { dryRun: true }
+          { dryRun: true },
         );
 
         return res.status(HttpStatus.OK).json({
           success: true,
-          message: 'Prayer sync dry run completed',
+          message: "Prayer sync dry run completed",
           results: {
             methods: methodsResult,
             prayerTimes: prayerTimesResult,
@@ -96,35 +112,37 @@ export class SyncController {
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Prayer sync completed successfully',
+        message: "Prayer sync completed successfully",
         results: result,
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Prayer sync failed',
+        message: "Prayer sync failed",
         error: error.message,
       });
     }
   }
 
-  @Post('all')
+  @Post("all")
   async syncAll(
     @Res() res: Response,
-    @Query('force') force?: string,
-    @Query('dryRun') dryRun?: string,
+    @Query("force") force?: string,
+    @Query("dryRun") dryRun?: string,
   ) {
     try {
-      const forceSync = force === 'true';
-      const isDryRun = dryRun === 'true';
+      const forceSync = force === "true";
+      const isDryRun = dryRun === "true";
 
       if (isDryRun) {
-        const quranResult = await this.syncCronService.manualQuranSync(forceSync);
-        const prayerResult = await this.syncCronService.manualPrayerSync(forceSync);
+        const quranResult =
+          await this.syncCronService.manualQuranSync(forceSync);
+        const prayerResult =
+          await this.syncCronService.manualPrayerSync(forceSync);
 
         return res.status(HttpStatus.OK).json({
           success: true,
-          message: 'Full sync dry run completed',
+          message: "Full sync dry run completed",
           results: {
             quran: quranResult,
             prayer: prayerResult,
@@ -141,7 +159,7 @@ export class SyncController {
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Full sync completed successfully',
+        message: "Full sync completed successfully",
         results: {
           quran: quranResult,
           prayer: prayerResult,
@@ -151,198 +169,205 @@ export class SyncController {
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Full sync failed',
+        message: "Full sync failed",
         error: error.message,
       });
     }
   }
 
-  @Get('status')
+  @Get("status")
   async getSyncStatus(@Res() res: Response) {
     try {
       // Get recent sync job logs
       // This would require accessing the database directly or creating a service method
       // For now, return basic status
-      
+
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Sync status retrieved',
+        message: "Sync status retrieved",
         status: {
-          lastQuranSync: 'Not implemented yet', // TODO: Implement
-          lastPrayerSync: 'Not implemented yet', // TODO: Implement
-          nextScheduledSync: '03:00 UTC daily',
+          lastQuranSync: "Not implemented yet", // TODO: Implement
+          lastPrayerSync: "Not implemented yet", // TODO: Implement
+          nextScheduledSync: "03:00 UTC daily",
           syncEnabled: true,
         },
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Failed to get sync status',
+        message: "Failed to get sync status",
         error: error.message,
       });
     }
   }
 
-  @Post('quran/chapters')
+  @Post("quran/chapters")
   async syncQuranChapters(
     @Res() res: Response,
-    @Query('force') force?: string,
-    @Query('dryRun') dryRun?: string,
+    @Query("force") force?: string,
+    @Query("dryRun") dryRun?: string,
   ) {
     try {
-      const forceSync = force === 'true';
-      const isDryRun = dryRun === 'true';
+      const forceSync = force === "true";
+      const isDryRun = dryRun === "true";
 
-      const result = await this.quranSyncService.syncChapters({ force: forceSync, dryRun: isDryRun });
+      const result = await this.quranSyncService.syncChapters({
+        force: forceSync,
+        dryRun: isDryRun,
+      });
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Quran chapters sync completed',
+        message: "Quran chapters sync completed",
         result,
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Quran chapters sync failed',
+        message: "Quran chapters sync failed",
         error: error.message,
       });
     }
   }
 
-  @Post('quran/verses')
+  @Post("quran/verses")
   async syncQuranVerses(
     @Res() res: Response,
-    @Query('force') force?: string,
-    @Query('dryRun') dryRun?: string,
+    @Query("force") force?: string,
+    @Query("dryRun") dryRun?: string,
   ) {
     try {
-      const forceSync = force === 'true';
-      const isDryRun = dryRun === 'true';
+      const forceSync = force === "true";
+      const isDryRun = dryRun === "true";
 
-      const result = await this.quranSyncService.syncVerses({ force: forceSync, dryRun: isDryRun });
+      const result = await this.quranSyncService.syncVerses({
+        force: forceSync,
+        dryRun: isDryRun,
+      });
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Quran verses sync completed',
+        message: "Quran verses sync completed",
         result,
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Quran verses sync failed',
+        message: "Quran verses sync failed",
         error: error.message,
       });
     }
   }
 
-  @Post('prayer/methods')
+  @Post("prayer/methods")
   async syncPrayerMethods(
     @Res() res: Response,
-    @Query('force') force?: string,
-    @Query('dryRun') dryRun?: string,
+    @Query("force") force?: string,
+    @Query("dryRun") dryRun?: string,
   ) {
     try {
-      const forceSync = force === 'true';
-      const isDryRun = dryRun === 'true';
+      const forceSync = force === "true";
+      const isDryRun = dryRun === "true";
 
-      const result = await this.prayerSyncService.syncCalculationMethods({ force: forceSync, dryRun: isDryRun });
+      const result = await this.prayerSyncService.syncCalculationMethods({
+        force: forceSync,
+        dryRun: isDryRun,
+      });
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Prayer methods sync completed',
+        message: "Prayer methods sync completed",
         result,
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Prayer methods sync failed',
+        message: "Prayer methods sync failed",
         error: error.message,
       });
     }
   }
 
-  @Post('prayer/times')
+  @Post("prayer/times")
   async syncPrayerTimes(
     @Res() res: Response,
-    @Query('lat') lat?: string,
-    @Query('lng') lng?: string,
-    @Query('force') force?: string,
-    @Query('dryRun') dryRun?: string,
+    @Query("lat") lat?: string,
+    @Query("lng") lng?: string,
+    @Query("force") force?: string,
+    @Query("dryRun") dryRun?: string,
   ) {
     try {
       if (!lat || !lng) {
         return res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
-          message: 'Latitude and longitude are required',
+          message: "Latitude and longitude are required",
         });
       }
 
       const latitude = parseFloat(lat);
       const longitude = parseFloat(lng);
-      const forceSync = force === 'true';
-      const isDryRun = dryRun === 'true';
+      const forceSync = force === "true";
+      const isDryRun = dryRun === "true";
 
       if (isNaN(latitude) || isNaN(longitude)) {
         return res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
-          message: 'Invalid latitude or longitude values',
+          message: "Invalid latitude or longitude values",
         });
       }
 
       const result = await this.prayerSyncService.syncPrayerTimes(
         latitude,
         longitude,
-        { force: forceSync, dryRun: isDryRun }
+        { force: forceSync, dryRun: isDryRun },
       );
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Prayer times sync completed',
+        message: "Prayer times sync completed",
         result,
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Prayer times sync failed',
+        message: "Prayer times sync failed",
         error: error.message,
       });
     }
   }
 
-  @Post('audio/reciters')
-  async syncAudioReciters(
-    @Res() res: Response,
-  ) {
+  @Post("audio/reciters")
+  async syncAudioReciters(@Res() res: Response) {
     try {
       const result = await this.audioSyncService.syncReciters();
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Audio reciters sync completed',
+        message: "Audio reciters sync completed",
         result,
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Audio reciters sync failed',
+        message: "Audio reciters sync failed",
         error: error.message,
       });
     }
   }
 
-  @Post('audio/files')
+  @Post("audio/files")
   async syncAudioFiles(
     @Res() res: Response,
-    @Query('reciterId') reciterId?: string,
-    @Query('chapterId') chapterId?: string,
+    @Query("reciterId") reciterId?: string,
+    @Query("chapterId") chapterId?: string,
   ) {
     try {
       let result;
-      
+
       if (reciterId && chapterId) {
         result = await this.audioSyncService.syncAudioFilesForChapter(
           parseInt(reciterId),
-          parseInt(chapterId)
+          parseInt(chapterId),
         );
       } else {
         result = await this.audioSyncService.syncAllAudioFiles();
@@ -350,36 +375,34 @@ export class SyncController {
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Audio files sync completed',
+        message: "Audio files sync completed",
         result,
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Audio files sync failed',
+        message: "Audio files sync failed",
         error: error.message,
       });
     }
   }
 
-  @Post('audio/seed')
-  async seedAudioData(
-    @Res() res: Response,
-  ) {
+  @Post("audio/seed")
+  async seedAudioData(@Res() res: Response) {
     try {
       await this.audioSeedService.runFullSeed();
 
       return res.status(HttpStatus.OK).json({
         success: true,
-        message: 'Audio data seed completed successfully',
+        message: "Audio data seed completed successfully",
         data: {
-          note: 'Seeded reciters and audio files for first 3 chapters',
+          note: "Seeded reciters and audio files for first 3 chapters",
         },
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Audio data seed failed',
+        message: "Audio data seed failed",
         error: error.message,
       });
     }
