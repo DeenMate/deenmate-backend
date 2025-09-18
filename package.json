@@ -23,7 +23,18 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed:prayer": "ts-node prisma/prayer-seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "enrich:prayer:locations": "node scripts/enrich-prayer-locations.js",
+    "backfill:quran:bn": "node scripts/backfill-quran-chapter-bn-names.js",
+    "seed:prayer:locations": "ts-node scripts/seed-prayer-locations.ts",
+    "global:prayer:sync": "ts-node scripts/global-prayer-sync.ts",
+    "seed:prayer:methods": "ts-node scripts/seed-prayer-methods.ts",
+    "seed:prayer:cities": "ts-node scripts/seed-prayer-cities.ts",
+    "foreground:prayer:prewarm": "ts-node scripts/foreground-prewarm.ts",
+    "clear:sync:today": "ts-node scripts/clear-and-sync-today.ts",
+    "test:single:prayer": "ts-node scripts/test-single-prayer-sync.ts",
+    "simple:sync:today": "ts-node scripts/simple-sync-today.ts",
+    "direct:sync:today": "ts-node scripts/direct-sync-today.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^3.1.3",

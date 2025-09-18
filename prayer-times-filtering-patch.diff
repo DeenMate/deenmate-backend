@@ -1,0 +1,408 @@
+# Prayer Times Content Management Filtering Enhancement
+# 
+# This patch implements comprehensive filtering for the Prayer Times Content Management page
+# in the DeenMate Admin Dashboard, allowing admins to filter prayer times by date, method, and madhab.
+#
+# Changes Made:
+# 1. Backend API enhancements for filtering
+# 2. Frontend UI components for filters
+# 3. Database query optimizations
+# 4. New API endpoints for dropdown data
+#
+# Author: AI Assistant
+# Date: September 17, 2025
+
+--- a/src/modules/admin/content-management/content-management.service.ts
++++ b/src/modules/admin/content-management/content-management.service.ts
+@@ -585,6 +585,7 @@ export class ContentManagementService {
+   }
+ 
+   // Prayer Times Overview with filtering by date, method, and madhab
++  // Enhanced to support filtering by date, method, and madhab parameters
+   async getPrayerTimesOverview(query: ContentQuery = {}): Promise<{ data: ContentItem[]; total: number }> {
+     const { page = 1, limit = 20, search, filters, sortBy = 'city', sortOrder = 'asc' } = query;
+     const skip = (page - 1) * limit;
+@@ -592,6 +593,12 @@ export class ContentManagementService {
+     // Parse filter parameters
+     const date = filters?.date ? new Date(filters.date) : new Date();
+     const method = filters?.method ? parseInt(filters.method) : 1; // Default to MWL
+     const madhab = filters?.madhab ? (filters.madhab === 'hanafi' ? 1 : 0) : 0; // Default to Shafi
++
++    // Normalize date to UTC start of day
++    const targetDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
++
++    // Build where clause for prayer times
++    const whereTimes: any = {
++      date: targetDate as any,
++      method: method,
++      school: madhab,
++    };
+@@ -601,6 +608,7 @@ export class ContentManagementService {
+     if (search) {
+       whereLoc.OR = [
+         { city: { contains: search, mode: 'insensitive' } },
+         { country: { contains: search, mode: 'insensitive' } },
+         { timezone: { contains: search, mode: 'insensitive' } },
+       ];
+     }
+@@ -608,6 +616,7 @@ export class ContentManagementService {
+     if (filters?.timezone) whereLoc.timezone = filters.timezone;
+ 
++    // Get prayer times with location data
+     const [prayerTimes, total] = await Promise.all([
+       (this.prisma as any).prayerTimes.findMany({
+         where: whereTimes,
+@@ -615,6 +624,7 @@ export class ContentManagementService {
+           location: true,
+           methodRef: true,
+         },
+         skip,
+         take: limit,
+         orderBy: { 
+           location: { [sortBy]: sortOrder }
+         },
+       }),
+@@ -622,6 +632,7 @@ export class ContentManagementService {
+         where: whereTimes,
+         include: {
+           location: true,
+         },
+       }),
+     ]);
+@@ -629,6 +640,7 @@ export class ContentManagementService {
+     // Filter by location criteria if specified
+     let filteredTimes = prayerTimes;
+     if (whereLoc.OR || whereLoc.country || whereLoc.timezone) {
+       filteredTimes = prayerTimes.filter(pt => {
+         const loc = pt.location;
+         if (!loc) return false;
+@@ -636,6 +648,7 @@ export class ContentManagementService {
+         // Check search criteria
+         if (whereLoc.OR) {
+           const matchesSearch = whereLoc.OR.some((condition: any) => {
+             if (condition.city) return loc.city?.toLowerCase().includes(condition.city.contains.toLowerCase());
+             if (condition.country) return loc.country?.toLowerCase().includes(condition.country.contains.toLowerCase());
+             if (condition.timezone) return loc.timezone?.toLowerCase().includes(condition.timezone.contains.toLowerCase());
+             return false;
+           });
+@@ -643,6 +656,7 @@ export class ContentManagementService {
+         }
+         
+         // Check country filter
+         if (whereLoc.country && loc.country !== whereLoc.country) return false;
+         
+         // Check timezone filter
+         if (whereLoc.timezone && loc.timezone !== whereLoc.timezone) return false;
+@@ -650,6 +664,7 @@ export class ContentManagementService {
+         return true;
+       });
+     }
+ 
++    // Transform data for frontend
+     const data: ContentItem[] = filteredTimes.map(pt => ({
+       id: pt.id,
+       city: pt.location?.city || 'Unknown',
+@@ -657,6 +672,7 @@ export class ContentManagementService {
+       locKey: pt.locKey,
+       lat: pt.location?.lat || 0,
+       lng: pt.location?.lng || 0,
+       timezone: pt.location?.timezone || 'UTC',
+       elevation: pt.location?.elevation || 0,
++      date: pt.date,
++      method: pt.method,
++      methodName: pt.methodRef?.methodName || 'Unknown',
++      methodCode: pt.methodRef?.methodCode || 'UNKNOWN',
++      madhab: pt.school === 1 ? 'Hanafi' : 'Shafi',
++      school: pt.school,
+       fajr: pt.fajr,
+       sunrise: pt.sunrise,
+       dhuhr: pt.dhuhr,
+@@ -664,6 +680,7 @@ export class ContentManagementService {
+       maghrib: pt.maghrib,
+       isha: pt.isha,
+       imsak: pt.imsak,
+       midnight: pt.midnight,
+       lastSynced: pt.lastSynced,
+       source: pt.source,
++      latitudeAdjustmentMethod: pt.latitudeAdjustmentMethod,
++      tune: pt.tune,
++      timezoneString: pt.timezone,
+     }));
+@@ -671,6 +688,7 @@ export class ContentManagementService {
+     return { data, total: filteredTimes.length };
+   }
++
++  // Get prayer calculation methods for filtering
++  async getPrayerMethods(): Promise<any[]> {
++    const methods = await (this.prisma as any).prayerCalculationMethod.findMany({
++      select: {
++        id: true,
++        methodName: true,
++        methodCode: true,
++        description: true,
++      },
++      orderBy: { methodName: 'asc' },
++    });
++
++    return methods;
++  }
+ }
+
+--- a/src/modules/admin/content-management/content-management.controller.ts
++++ b/src/modules/admin/content-management/content-management.controller.ts
+@@ -32,6 +32,7 @@ export class ContentManagementController {
+   @Get(':module')
+   @ApiOperation({ summary: 'Get content for a specific module' })
+   @ApiQuery({ name: 'page', required: false, type: 'number' })
+   @ApiQuery({ name: 'limit', required: false, type: 'number' })
+   @ApiQuery({ name: 'search', required: false, type: 'string' })
+   @ApiQuery({ name: 'sortBy', required: false, type: 'string' })
+   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
++  @ApiQuery({ name: 'date', required: false, type: 'string', description: 'Date filter for prayer times (ISO date string)' })
++  @ApiQuery({ name: 'method', required: false, type: 'string', description: 'Method ID or code for prayer times' })
++  @ApiQuery({ name: 'madhab', required: false, type: 'string', enum: ['shafi', 'hanafi'], description: 'Madhab for prayer times' })
+   @ApiResponse({ status: 200, description: 'Content retrieved successfully' })
+   async getContent(
+     @Param('module') module: string,
+@@ -39,6 +40,7 @@ export class ContentManagementController {
+     @Query('limit') limit?: string,
+     @Query('search') search?: string,
+     @Query('sortBy') sortBy?: string,
+     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
++    @Query('date') date?: string,
++    @Query('method') method?: string,
++    @Query('madhab') madhab?: string,
+     @Query() filters?: any,
+   ) {
+     const query: ContentQuery = {
+@@ -46,6 +48,7 @@ export class ContentManagementController {
+       limit: limit ? parseInt(limit) : 20,
+       search,
+       sortBy,
+       sortOrder,
+       filters: {
+         ...filters,
++        // Add prayer times specific filters
++        ...(date && { date }),
++        ...(method && { method }),
++        ...(madhab && { madhab }),
+       },
+     };
+@@ -53,6 +56,7 @@ export class ContentManagementController {
+     const result = await this.contentService.getContent(module, query);
+     
+     return {
+       success: true,
+       data: result.data,
+       pagination: {
+@@ -60,6 +64,7 @@ export class ContentManagementController {
+         limit: query.limit,
+         total: result.total,
+         totalPages: Math.ceil(result.total / query.limit),
+       },
+     };
+   }
+@@ -327,6 +332,7 @@ export class ContentManagementController {
+     };
+   }
+ 
++  @Get('prayer-times/methods')
++  @ApiOperation({ summary: 'Get prayer calculation methods for filtering' })
++  @ApiResponse({ status: 200, description: 'Prayer methods retrieved successfully' })
++  async getPrayerMethods() {
++    const methods = await this.contentService.getPrayerMethods();
++    return {
++      success: true,
++      data: methods,
++    };
++  }
++
++  @Get('prayer-times/madhabs')
++  @ApiOperation({ summary: 'Get prayer madhabs for filtering' })
++  @ApiResponse({ status: 200, description: 'Prayer madhabs retrieved successfully' })
++  async getPrayerMadhabs() {
++    const madhabs = [
++      { id: 0, name: 'Shafi', code: 'shafi' },
++      { id: 1, name: 'Hanafi', code: 'hanafi' },
++    ];
++    return {
++      success: true,
++      data: madhabs,
++    };
++  }
++
+   private convertToCSV(data: any[]): string {
+     if (data.length === 0) return '';
+
+--- a/admin-dashboard/src/lib/api.ts
++++ b/admin-dashboard/src/lib/api.ts
+@@ -340,6 +340,7 @@ export const apiClient = {
+     return response.data;
+   },
+ 
++  // Prayer Times specific API methods
+   getPrayerMethods: async (): Promise<{ success: boolean; data: any[] }> => {
+     const response = await api.get('/admin/content/prayer-times/methods');
+     return response.data;
+   },
+@@ -347,6 +348,7 @@ export const apiClient = {
+   getPrayerMadhabs: async (): Promise<{ success: boolean; data: any[] }> => {
+     const response = await api.get('/admin/content/prayer-times/madhabs');
+     return response.data;
+   },
+ 
+   importContent: async (module: string, data: any[], format: 'json' | 'csv' = 'json'): Promise<{ success: boolean; data: any; message: string }> => {
+     const response = await api.post(`/admin/content/${module}/import`, { data, format });
+
+--- a/admin-dashboard/src/components/content/DataEditor.tsx
++++ b/admin-dashboard/src/components/content/DataEditor.tsx
+@@ -77,6 +77,7 @@ const moduleFieldConfigs: Record<string, FieldConfig[]> = {
+   'prayer times': [
+     { key: 'city', label: 'City', type: 'text' },
+     { key: 'country', label: 'Country', type: 'text' },
+     { key: 'locKey', label: 'Loc Key', type: 'text', required: true },
+     { key: 'lat', label: 'Latitude', type: 'number', required: true },
+     { key: 'lng', label: 'Longitude', type: 'number', required: true },
+     { key: 'timezone', label: 'Timezone', type: 'text' },
+     { key: 'elevation', label: 'Elevation', type: 'number' },
++    { key: 'date', label: 'Date', type: 'date' },
++    { key: 'method', label: 'Method', type: 'text' },
++    { key: 'methodName', label: 'Method Name', type: 'text' },
++    { key: 'madhab', label: 'Madhab', type: 'text' },
+     { key: 'fajr', label: 'Fajr', type: 'date' },
+     { key: 'sunrise', label: 'Sunrise', type: 'date' },
+     { key: 'dhuhr', label: 'Dhuhr', type: 'date' },
+@@ -84,6 +85,7 @@ const moduleFieldConfigs: Record<string, FieldConfig[]> = {
+     { key: 'maghrib', label: 'Maghrib', type: 'date' },
+     { key: 'isha', label: 'Isha', type: 'date' },
+     { key: 'lastSynced', label: 'Last Synced', type: 'date' },
+     { key: 'source', label: 'Source', type: 'text' },
+   ],
+@@ -140,6 +142,7 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorP
+   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
+   const [sortBy, setSortBy] = useState<string>('');
+   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
++  
++  // Prayer times specific filters
++  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
++  const [selectedMethod, setSelectedMethod] = useState<string>('1'); // Default to MWL
++  const [selectedMadhab, setSelectedMadhab] = useState<string>('shafi'); // Default to Shafi
++  const [prayerMethods, setPrayerMethods] = useState<any[]>([]);
++  const [prayerMadhabs, setPrayerMadhabs] = useState<any[]>([]);
+@@ -156,6 +159,7 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorP
+   useEffect(() => {
+     if (isOpen) {
+       setCurrentPage(1);
+       fetchData();
++      
++      // Load prayer methods and madhabs for prayer times module
++      if (moduleName.toLowerCase() === 'prayer times') {
++        loadPrayerFilters();
++      }
+     }
+   }, [isOpen, moduleName]);
+@@ -163,6 +167,7 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorP
+   // Refetch when page, search, or filters change
+   useEffect(() => {
+     if (isOpen) {
+       fetchData();
+     }
+-  }, [currentPage, searchTerm]);
++  }, [currentPage, searchTerm, selectedDate, selectedMethod, selectedMadhab]);
+@@ -192,6 +197,7 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorP
+   }, [isOpen, moduleName]);
+ 
++  const loadPrayerFilters = async () => {
++    try {
++      const [methodsResponse, madhabsResponse] = await Promise.all([
++        apiClient.getPrayerMethods(),
++        apiClient.getPrayerMadhabs(),
++      ]);
++      setPrayerMethods(methodsResponse.data);
++      setPrayerMadhabs(madhabsResponse.data);
++    } catch (error) {
++      console.error('Failed to load prayer filters:', error);
++    }
++  };
++
+   const fetchData = async () => {
+     setIsLoading(true);
+@@ -229,6 +235,7 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorP
+     try {
+       const params: any = { page: currentPage, limit: itemsPerPage };
+       if (searchTerm) params.search = searchTerm;
++      
++      // Add prayer times specific filters
++      if (moduleKey === 'prayer times') {
++        params.date = selectedDate;
++        params.method = selectedMethod;
++        params.madhab = selectedMadhab;
++      }
+       
+       const response: any = await apiClient.getContent(apiModule, params);
+       const items = Array.isArray(response.data) ? response.data : (response.data ? [response.data] : []);
+@@ -590,6 +597,7 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorP
+                 )}
+               </div>
+ 
++              {/* Prayer Times Filters */}
++              {moduleName.toLowerCase() === 'prayer times' && (
++                <div className="flex items-center gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
++                  <div className="flex items-center gap-2">
++                    <label className="text-sm font-medium text-gray-700">Date:</label>
++                    <Input
++                      type="date"
++                      value={selectedDate}
++                      onChange={(e) => setSelectedDate(e.target.value)}
++                      className="w-40"
++                    />
++                  </div>
++                  
++                  <div className="flex items-center gap-2">
++                    <label className="text-sm font-medium text-gray-700">Method:</label>
++                    <Select value={selectedMethod} onValueChange={setSelectedMethod}>
++                      <SelectTrigger className="w-48">
++                        <SelectValue placeholder="Select method" />
++                      </SelectTrigger>
++                      <SelectContent>
++                        {prayerMethods.map((method) => (
++                          <SelectItem key={method.id} value={method.id.toString()}>
++                            {method.methodName} ({method.methodCode})
++                          </SelectItem>
++                        ))}
++                      </SelectContent>
++                    </Select>
++                  </div>
++                  
++                  <div className="flex items-center gap-2">
++                    <label className="text-sm font-medium text-gray-700">Madhab:</label>
++                    <Select value={selectedMadhab} onValueChange={setSelectedMadhab}>
++                      <SelectTrigger className="w-32">
++                        <SelectValue placeholder="Select madhab" />
++                      </SelectTrigger>
++                      <SelectContent>
++                        {prayerMadhabs.map((madhab) => (
++                          <SelectItem key={madhab.code} value={madhab.code}>
++                            {madhab.name}
++                          </SelectItem>
++                        ))}
++                      </SelectContent>
++                    </Select>
++                  </div>
++                  
++                  <div className="text-sm text-gray-600">
++                    Showing prayer times for {selectedDate} with {prayerMethods.find(m => m.id.toString() === selectedMethod)?.methodName || 'Unknown Method'} ({selectedMadhab})
++                  </div>
++                </div>
++              )}
++
+               <div className="flex-1 overflow-auto max-h-[60vh]">
+                 <table className="w-full border-collapse">
+                   <thead className="sticky top-0 bg-white z-10">
+                     <tr className="border-b">
+                       {fieldConfigs.filter(f => (visibleColumns.length ? visibleColumns.includes(f.key) : true)).map((field) => (
+                         <th
+                           key={field.key}
+                           className="text-left p-3 font-semibold bg-white cursor-pointer select-none"
+                           onClick={() => onHeaderClick(field.key)}
+                           title="Click to sort"

@@ -108,6 +108,191 @@ export class AdminController {
     };
   }
 
+  @Post("sync/prayer/prewarm")
+  @ApiOperation({ summary: "Prewarm prayer times for all locations (default 7 days)" })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Number of days including today' })
+  async prewarmPrayer(@Query('days') days?: string) {
+    const result = await this.adminService.prewarmPrayerTimes(days ? parseInt(days, 10) : 7);
+    return {
+      success: result.success,
+      message: `Prewarm completed in ${result.durationMs}ms`,
+      data: result,
+    };
+  }
+
+  @Post("sync/prayer/times")
+  @ApiOperation({ summary: "Sync prayer times for specific location and method" })
+  @ApiQuery({ name: 'lat', required: true, type: Number, description: 'Latitude' })
+  @ApiQuery({ name: 'lng', required: true, type: Number, description: 'Longitude' })
+  @ApiQuery({ name: 'methodCode', required: true, type: String, description: 'Prayer calculation method code' })
+  @ApiQuery({ name: 'school', required: false, type: Number, description: 'School: 0=Shafi, 1=Hanafi (default: 0)' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Number of days to sync (default: 1)' })
+  @ApiQuery({ name: 'force', required: false, type: Boolean, description: 'Force sync even if data exists (default: false)' })
+  @ApiQuery({ name: 'latitudeAdjustmentMethod', required: false, type: Number, description: 'High latitude adjustment: 0=None, 1=Middle, 2=OneSeventh, 3=AngleBased (default: 0)' })
+  @ApiQuery({ name: 'tune', required: false, type: String, description: 'Minute offsets: "fajr,sunrise,dhuhr,asr,maghrib,isha" (default: null)' })
+  @ApiQuery({ name: 'timezonestring', required: false, type: String, description: 'IANA timezone: "Asia/Dhaka", "America/New_York" (default: null)' })
+  async syncPrayerTimes(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('methodCode') methodCode: string,
+    @Query('school') school?: string,
+    @Query('days') days?: string,
+    @Query('force') force?: string,
+    @Query('latitudeAdjustmentMethod') latitudeAdjustmentMethod?: string,
+    @Query('tune') tune?: string,
+    @Query('timezonestring') timezonestring?: string
+  ) {
+    const result = await this.adminService.syncPrayerTimesForLocation(
+      parseFloat(lat),
+      parseFloat(lng),
+      methodCode,
+      school ? parseInt(school, 10) : 0,
+      days ? parseInt(days, 10) : 1,
+      force === 'true',
+      latitudeAdjustmentMethod ? parseInt(latitudeAdjustmentMethod, 10) : undefined,
+      tune,
+      timezonestring
+    );
+    return {
+      success: result.success,
+      message: result.message,
+      data: result,
+    };
+  }
+
+  @Post("sync/prayer/calendar")
+  @ApiOperation({ summary: "Sync prayer times for a full month using calendar endpoint" })
+  @ApiQuery({ name: 'lat', required: true, type: Number, description: 'Latitude' })
+  @ApiQuery({ name: 'lng', required: true, type: Number, description: 'Longitude' })
+  @ApiQuery({ name: 'methodCode', required: true, type: String, description: 'Prayer calculation method code' })
+  @ApiQuery({ name: 'school', required: false, type: Number, description: 'School: 0=Shafi, 1=Hanafi (default: 0)' })
+  @ApiQuery({ name: 'year', required: true, type: Number, description: 'Year (e.g., 2025)' })
+  @ApiQuery({ name: 'month', required: true, type: Number, description: 'Month (1-12)' })
+  @ApiQuery({ name: 'force', required: false, type: Boolean, description: 'Force sync even if data exists (default: false)' })
+  @ApiQuery({ name: 'latitudeAdjustmentMethod', required: false, type: Number, description: 'High latitude adjustment: 0=None, 1=Middle, 2=OneSeventh, 3=AngleBased (default: 0)' })
+  @ApiQuery({ name: 'tune', required: false, type: String, description: 'Minute offsets: "fajr,sunrise,dhuhr,asr,maghrib,isha" (default: null)' })
+  @ApiQuery({ name: 'timezonestring', required: false, type: String, description: 'IANA timezone: "Asia/Dhaka", "America/New_York" (default: null)' })
+  async syncPrayerTimesCalendar(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('methodCode') methodCode: string,
+    @Query('school') school?: string,
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+    @Query('force') force?: string,
+    @Query('latitudeAdjustmentMethod') latitudeAdjustmentMethod?: string,
+    @Query('tune') tune?: string,
+    @Query('timezonestring') timezonestring?: string
+  ) {
+    const result = await this.adminService.syncPrayerTimesCalendar(
+      parseFloat(lat),
+      parseFloat(lng),
+      methodCode,
+      school ? parseInt(school, 10) : 0,
+      year ? parseInt(year, 10) : new Date().getFullYear(),
+      month ? parseInt(month, 10) : new Date().getMonth() + 1,
+      force === 'true',
+      latitudeAdjustmentMethod ? parseInt(latitudeAdjustmentMethod, 10) : undefined,
+      tune,
+      timezonestring
+    );
+    return {
+      success: result.success,
+      message: result.message,
+      data: result,
+    };
+  }
+
+  @Post("sync/prayer/hijri-calendar")
+  @ApiOperation({ summary: "Sync prayer times for a full Hijri month using Hijri calendar endpoint" })
+  @ApiQuery({ name: 'lat', required: true, type: Number, description: 'Latitude' })
+  @ApiQuery({ name: 'lng', required: true, type: Number, description: 'Longitude' })
+  @ApiQuery({ name: 'methodCode', required: true, type: String, description: 'Prayer calculation method code' })
+  @ApiQuery({ name: 'school', required: false, type: Number, description: 'School: 0=Shafi, 1=Hanafi (default: 0)' })
+  @ApiQuery({ name: 'hijriYear', required: true, type: Number, description: 'Hijri Year (e.g., 1447)' })
+  @ApiQuery({ name: 'hijriMonth', required: true, type: Number, description: 'Hijri Month (1-12)' })
+  @ApiQuery({ name: 'force', required: false, type: Boolean, description: 'Force sync even if data exists (default: false)' })
+  @ApiQuery({ name: 'latitudeAdjustmentMethod', required: false, type: Number, description: 'High latitude adjustment: 0=None, 1=Middle, 2=OneSeventh, 3=AngleBased (default: 0)' })
+  @ApiQuery({ name: 'tune', required: false, type: String, description: 'Minute offsets: "fajr,sunrise,dhuhr,asr,maghrib,isha" (default: null)' })
+  @ApiQuery({ name: 'timezonestring', required: false, type: String, description: 'IANA timezone: "Asia/Dhaka", "America/New_York" (default: null)' })
+  async syncPrayerTimesHijriCalendar(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('methodCode') methodCode: string,
+    @Query('school') school?: string,
+    @Query('hijriYear') hijriYear?: string,
+    @Query('hijriMonth') hijriMonth?: string,
+    @Query('force') force?: string,
+    @Query('latitudeAdjustmentMethod') latitudeAdjustmentMethod?: string,
+    @Query('tune') tune?: string,
+    @Query('timezonestring') timezonestring?: string
+  ) {
+    const result = await this.adminService.syncPrayerTimesHijriCalendar(
+      parseFloat(lat),
+      parseFloat(lng),
+      methodCode,
+      school ? parseInt(school, 10) : 0,
+      hijriYear ? parseInt(hijriYear, 10) : 1447,
+      hijriMonth ? parseInt(hijriMonth, 10) : 1,
+      force === 'true',
+      latitudeAdjustmentMethod ? parseInt(latitudeAdjustmentMethod, 10) : undefined,
+      tune,
+      timezonestring
+    );
+    return {
+      success: result.success,
+      message: result.message,
+      data: result,
+    };
+  }
+
+  @Get("prayer/convert/gregorian-to-hijri")
+  @ApiOperation({ summary: "Convert Gregorian date to Hijri date" })
+  @ApiQuery({ name: 'date', required: true, type: String, description: 'Gregorian date in DD-MM-YYYY format' })
+  async convertGregorianToHijri(@Query('date') date: string) {
+    const result = await this.adminService.convertGregorianToHijri(date);
+    return {
+      success: !!result,
+      data: result,
+      message: result ? "Date converted successfully" : "Failed to convert date",
+    };
+  }
+
+  @Get("prayer/convert/hijri-to-gregorian")
+  @ApiOperation({ summary: "Convert Hijri date to Gregorian date" })
+  @ApiQuery({ name: 'date', required: true, type: String, description: 'Hijri date in DD-MM-YYYY format' })
+  async convertHijriToGregorian(@Query('date') date: string) {
+    const result = await this.adminService.convertHijriToGregorian(date);
+    return {
+      success: !!result,
+      data: result,
+      message: result ? "Date converted successfully" : "Failed to convert date",
+    };
+  }
+
+  @Get("prayer/current-time")
+  @ApiOperation({ summary: "Get current time in specified timezone" })
+  @ApiQuery({ name: 'timezone', required: true, type: String, description: 'IANA timezone (e.g., Asia/Dhaka)' })
+  async getCurrentTime(@Query('timezone') timezone: string) {
+    const result = await this.adminService.getCurrentTime(timezone);
+    return {
+      success: !!result,
+      data: result,
+      message: result ? "Current time retrieved successfully" : "Failed to get current time",
+    };
+  }
+
+  @Get("prayer/asma-al-husna")
+  @ApiOperation({ summary: "Get Asma Al Husna (Names of Allah)" })
+  async getAsmaAlHusna() {
+    const result = await this.adminService.getAsmaAlHusna();
+    return {
+      success: !!result,
+      data: result,
+      message: result ? "Asma Al Husna retrieved successfully" : "Failed to get Asma Al Husna",
+    };
+  }
+
   @Post("sync/hadith")
   @ApiOperation({ summary: "Trigger Hadith data sync for all collections" })
   @ApiResponse({
@@ -239,6 +424,31 @@ export class AdminController {
         uptime: stats.system.uptime,
         timestamp: new Date().toISOString(),
       },
+    };
+  }
+
+  @Get('prayer-filters/methods')
+  @ApiOperation({ summary: 'Get prayer calculation methods for filtering' })
+  @ApiResponse({ status: 200, description: 'Prayer methods retrieved successfully' })
+  async getPrayerMethods() {
+    const methods = await this.adminService.getPrayerMethods();
+    return {
+      success: true,
+      data: methods,
+    };
+  }
+
+  @Get('prayer-filters/madhabs')
+  @ApiOperation({ summary: 'Get prayer madhabs for filtering' })
+  @ApiResponse({ status: 200, description: 'Prayer madhabs retrieved successfully' })
+  async getPrayerMadhabs() {
+    const madhabs = [
+      { id: 0, name: 'Shafi', code: 'shafi' },
+      { id: 1, name: 'Hanafi', code: 'hanafi' },
+    ];
+    return {
+      success: true,
+      data: madhabs,
     };
   }
 }

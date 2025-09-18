@@ -480,9 +480,24 @@ export class SyncJobsProcessor extends WorkerHost {
   private async processPrayerJob(job: Job<SyncJob>): Promise<any> {
     const { action, data } = job.data;
     
-    this.logger.log('Starting Prayer sync job processing');
+    this.logger.log(`Starting Prayer sync job processing with action: ${action}`);
     
     try {
+      // Handle prewarm action
+      if (action === 'prewarm') {
+        await job.updateProgress(10);
+        
+        const days = data?.days || 7;
+        this.logger.log(`Starting prayer prewarm for ${days} days`);
+        
+        const prewarmResult = await this.prayerSyncService.prewarmAllLocations(days);
+        this.logger.log(`Prayer prewarm result: ${JSON.stringify(prewarmResult)}`);
+        
+        await job.updateProgress(100);
+        return prewarmResult;
+      }
+      
+      // Default sync action
       await job.updateProgress(10);
       
       // Sync calculation methods

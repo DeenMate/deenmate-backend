@@ -424,6 +424,8 @@ export class ContentManagementService {
         return this.getReciters(query);
       case 'prayer':
         return this.getPrayerLocations(query);
+      case 'prayer-times':
+        return this.getPrayerTimesOverview(query);
       default:
         throw new BadRequestException(`Unsupported module: ${module}`);
     }
@@ -578,5 +580,116 @@ export class ContentManagementService {
       this.logger.error(`Failed to delete prayer location: ${error.message}`);
       throw new BadRequestException('Failed to delete prayer location');
     }
+  }
+
+  // Prayer Times Overview with filtering by date, method, and madhab
+  async getPrayerTimesOverview(query: ContentQuery = {}): Promise<{ data: ContentItem[]; total: number }> {
+    const { page = 1, limit = 20, search, filters, sortBy = 'city', sortOrder = 'asc' } = query;
+    const skip = (page - 1) * limit;
+
+    // Parse filter parameters
+    const date = filters?.date ? new Date(filters.date) : new Date();
+    const methodFilter = filters?.method;
+    const madhabFilter = filters?.madhab;
+
+    // Normalize date to UTC start of day
+    const targetDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+
+    // Build where clause for prayer times
+    const whereTimes: any = {
+      date: targetDate as any,
+    };
+
+    // Add method filter only if not "all"
+    if (methodFilter && methodFilter !== 'all') {
+      whereTimes.method = parseInt(methodFilter);
+    }
+
+    // Add madhab filter only if not "all"
+    if (madhabFilter && madhabFilter !== 'all') {
+      whereTimes.school = madhabFilter === 'hanafi' ? 1 : 0;
+    }
+
+    // Build where clause for locations and compose Prisma where
+    const locationWhere: any = {};
+    if (search) {
+      locationWhere.OR = [
+        { city: { contains: search, mode: 'insensitive' } },
+        { country: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (filters?.country) locationWhere.country = filters.country;
+    if (filters?.timezone) locationWhere.timezone = filters.timezone;
+
+    const prismaWhere = Object.keys(locationWhere).length
+      ? { ...whereTimes, location: locationWhere }
+      : whereTimes;
+
+    // Get prayer times with location data and accurate total
+    const [prayerTimes, total] = await Promise.all([
+      this.prisma.prayerTimes.findMany({
+        where: prismaWhere,
+        include: {
+          location: true,
+          methodRef: true,
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          location: { [sortBy]: sortOrder },
+        },
+      }),
+      this.prisma.prayerTimes.count({
+        where: prismaWhere,
+      }),
+    ]);
+
+    // Transform data for frontend
+    const data: ContentItem[] = prayerTimes.map(pt => ({
+      id: pt.id,
+      city: pt.location?.city || 'Unknown',
+      country: pt.location?.country || 'Unknown',
+      locKey: pt.locKey,
+      lat: pt.location?.lat || 0,
+      lng: pt.location?.lng || 0,
+      timezone: pt.location?.timezone || 'UTC',
+      elevation: pt.location?.elevation || 0,
+      date: pt.date,
+      method: pt.method,
+      methodName: pt.methodRef?.methodName || 'Unknown',
+      methodCode: pt.methodRef?.methodCode || 'UNKNOWN',
+      madhab: pt.school === 1 ? 'Hanafi' : 'Shafi',
+      school: pt.school,
+      fajr: pt.fajr,
+      sunrise: pt.sunrise,
+      dhuhr: pt.dhuhr,
+      asr: pt.asr,
+      maghrib: pt.maghrib,
+      isha: pt.isha,
+      imsak: pt.imsak,
+      midnight: pt.midnight,
+      lastSynced: pt.lastSynced,
+      source: pt.source,
+      latitudeAdjustmentMethod: pt.latitudeAdjustmentMethod,
+      tune: pt.tune,
+      timezoneString: pt.timezone,
+    }));
+
+    return { data, total };
+  }
+
+  // Get prayer calculation methods for filtering
+  async getPrayerMethods(): Promise<any[]> {
+    const methods = await this.prisma.prayerCalculationMethod.findMany({
+      select: {
+        id: true,
+        methodName: true,
+        methodCode: true,
+        description: true,
+      },
+      orderBy: { methodName: 'asc' },
+    });
+
+    return methods;
   }
 }

@@ -1,12 +1,13 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { RedisService } from "../../redis/redis.service";
-import { WorkerService } from "../../workers/worker.service";
+import { WorkerService, SyncJob } from "../../workers/worker.service";
 import { QuranSyncService } from "../quran/quran.sync.service";
 import { PrayerSyncService } from "../prayer/prayer.sync.service";
 import { HadithSyncService } from "../hadith/hadith-sync.service";
 import { AudioSyncService } from "../audio/audio.sync.service";
 import { GoldPriceScheduler } from "../finance/goldprice.scheduler";
+import { GoldPriceService } from "../finance/goldprice.service";
 
 export interface SystemStats {
   quran: {
@@ -56,6 +57,7 @@ export class AdminService {
     private readonly hadithSync: HadithSyncService,
     private readonly audioSync: AudioSyncService,
     private readonly goldPriceScheduler: GoldPriceScheduler,
+    private readonly goldPriceService: GoldPriceService,
   ) {}
 
   async getSystemStats(): Promise<SystemStats> {
@@ -335,14 +337,269 @@ export class AdminService {
 
   async triggerPrayerSync(): Promise<{ success: boolean; message: string }> {
     try {
-      await this.prayerSync.syncCalculationMethods();
-      return { success: true, message: "Prayer sync triggered successfully" };
+      // Change behavior: When dashboard requests Prayer sync, run 1-day prewarm for all cities/methods/madhabs
+      const res = await this.prayerSync.prewarmAllLocations(1);
+      return { success: res.success, message: res.success ? "Prayer prewarm (today) triggered successfully" : "Prayer prewarm failed" };
     } catch (error) {
       this.logger.error("Failed to trigger Prayer sync", error.stack);
       return {
         success: false,
         message: `Prayer sync failed: ${error.message}`,
       };
+    }
+  }
+
+  async prewarmPrayerTimes(days: number = 7) {
+    try {
+      // Queue the prayer prewarm as a background job instead of running synchronously
+      const syncJob: SyncJob = {
+        type: 'prayer',
+        action: 'prewarm',
+        data: { days },
+        priority: 1,
+      };
+
+      // Add job to queue
+      const job = await this.workerService.addSyncJob(syncJob);
+      
+      this.logger.log(`Prayer prewarm job queued with ID: ${job.id}`);
+      
+      return {
+        success: true,
+        message: `Prayer prewarm for ${days} days queued successfully`,
+        jobId: job.id?.toString(),
+        resource: 'times',
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        recordsFailed: 0,
+        errors: [],
+        durationMs: 0,
+      };
+    } catch (error) {
+      this.logger.error('Failed to queue prayer prewarm', error.stack);
+      return {
+        success: false,
+        resource: 'times',
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        recordsFailed: 0,
+        errors: [error.message],
+        durationMs: 0,
+      } as any;
+    }
+  }
+
+  async syncPrayerTimesForLocation(
+    lat: number,
+    lng: number,
+    methodCode: string,
+    school: number = 0,
+    days: number = 1,
+    force: boolean = false,
+    latitudeAdjustmentMethod?: number,
+    tune?: string,
+    timezonestring?: string
+  ) {
+    try {
+      // Find the method ID from the method code
+      const method = await this.prisma.prayerCalculationMethod.findFirst({
+        where: { methodCode },
+        select: { id: true }
+      });
+
+      if (!method) {
+        return {
+          success: false,
+          message: `Prayer calculation method '${methodCode}' not found`,
+        };
+      }
+
+      // Calculate date range
+      // Use UTC date to avoid timezone issues
+      const now = new Date();
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const endDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + days - 1));
+
+      this.logger.log(`Admin service: Calling syncPrayerTimesForMethod with dateRange: ${today.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]} (${days} days)`);
+      this.logger.log(`Admin service: Method ID: ${method.id}, School: ${school}, Force: ${force}`);
+
+      const result = await this.prayerSync.syncPrayerTimesForMethod(
+        lat,
+        lng,
+        method.id,
+        school,
+        {
+          force,
+          resource: 'times',
+          dateRange: { start: today, end: endDate },
+          latitudeAdjustmentMethod,
+          tune,
+          timezonestring
+        }
+      );
+      return {
+        success: result.success,
+        message: result.success ? "Prayer times sync completed" : "Prayer times sync failed",
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error("Failed to sync prayer times for location", error.stack);
+      return {
+        success: false,
+        message: `Prayer times sync failed: ${error.message}`,
+      };
+    }
+  }
+
+  async syncPrayerTimesCalendar(
+    lat: number,
+    lng: number,
+    methodCode: string,
+    school: number = 0,
+    year: number,
+    month: number,
+    force: boolean = false,
+    latitudeAdjustmentMethod?: number,
+    tune?: string,
+    timezonestring?: string
+  ) {
+    try {
+      // Find the method ID from the method code
+      const method = await this.prisma.prayerCalculationMethod.findFirst({
+        where: { methodCode },
+        select: { id: true }
+      });
+
+      if (!method) {
+        return {
+          success: false,
+          message: `Prayer calculation method '${methodCode}' not found`,
+        };
+      }
+
+      this.logger.log(`Admin service: Calling syncPrayerTimesCalendar for ${year}-${month} with method=${method.id}, school=${school}, force=${force}`);
+
+      const result = await this.prayerSync.syncPrayerTimesCalendar(
+        lat,
+        lng,
+        method.id,
+        school,
+        year,
+        month,
+        {
+          force,
+          resource: 'calendar',
+          latitudeAdjustmentMethod,
+          tune,
+          timezonestring
+        }
+      );
+      return {
+        success: result.success,
+        message: result.success ? `Prayer times calendar sync completed for ${year}-${month}` : "Prayer times calendar sync failed",
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error("Failed to sync prayer times calendar", error.stack);
+      return {
+        success: false,
+        message: `Prayer times calendar sync failed: ${error.message}`,
+      };
+    }
+  }
+
+  async syncPrayerTimesHijriCalendar(
+    lat: number,
+    lng: number,
+    methodCode: string,
+    school: number = 0,
+    hijriYear: number,
+    hijriMonth: number,
+    force: boolean = false,
+    latitudeAdjustmentMethod?: number,
+    tune?: string,
+    timezonestring?: string
+  ) {
+    try {
+      // Find the method ID from the method code
+      const method = await this.prisma.prayerCalculationMethod.findFirst({
+        where: { methodCode },
+        select: { id: true }
+      });
+
+      if (!method) {
+        return {
+          success: false,
+          message: `Prayer calculation method '${methodCode}' not found`,
+        };
+      }
+
+      this.logger.log(`Admin service: Calling syncPrayerTimesHijriCalendar for Hijri ${hijriYear}-${hijriMonth} with method=${method.id}, school=${school}, force=${force}`);
+
+      const result = await this.prayerSync.syncPrayerTimesHijriCalendar(
+        lat,
+        lng,
+        method.id,
+        school,
+        hijriYear,
+        hijriMonth,
+        {
+          force,
+          resource: 'hijri-calendar',
+          latitudeAdjustmentMethod,
+          tune,
+          timezonestring
+        }
+      );
+      return {
+        success: result.success,
+        message: result.success ? `Prayer times Hijri calendar sync completed for ${hijriYear}-${hijriMonth}` : "Prayer times Hijri calendar sync failed",
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error("Failed to sync prayer times Hijri calendar", error.stack);
+      return {
+        success: false,
+        message: `Prayer times Hijri calendar sync failed: ${error.message}`,
+      };
+    }
+  }
+
+  async convertGregorianToHijri(gregorianDate: string) {
+    try {
+      return await this.prayerSync.convertGregorianToHijri(gregorianDate);
+    } catch (error) {
+      this.logger.error("Failed to convert Gregorian to Hijri", error.stack);
+      return null;
+    }
+  }
+
+  async convertHijriToGregorian(hijriDate: string) {
+    try {
+      return await this.prayerSync.convertHijriToGregorian(hijriDate);
+    } catch (error) {
+      this.logger.error("Failed to convert Hijri to Gregorian", error.stack);
+      return null;
+    }
+  }
+
+  async getCurrentTime(timezone: string) {
+    try {
+      return await this.prayerSync.getCurrentTime(timezone);
+    } catch (error) {
+      this.logger.error("Failed to get current time", error.stack);
+      return null;
+    }
+  }
+
+  async getAsmaAlHusna() {
+    try {
+      return await this.prayerSync.getAsmaAlHusna();
+    } catch (error) {
+      this.logger.error("Failed to get Asma Al Husna", error.stack);
+      return null;
     }
   }
 
@@ -395,10 +652,10 @@ export class AdminService {
     message: string;
   }> {
     try {
-      await this.goldPriceScheduler.handleDailyScrape();
+      const result = await this.goldPriceService.fetchAndStore();
       return {
         success: true,
-        message: "Gold price update triggered successfully",
+        message: `Gold price update triggered successfully. ${result.inserted} records inserted.`,
       };
     } catch (error) {
       this.logger.error("Failed to trigger Gold price update", error.stack);
@@ -491,5 +748,18 @@ export class AdminService {
         message: `Cache clear failed: ${error.message}`,
       };
     }
+  }
+
+  async getPrayerMethods(): Promise<any[]> {
+    const methods = await this.prisma.prayerCalculationMethod.findMany({
+      select: {
+        id: true,
+        methodName: true,
+        methodCode: true,
+        description: true,
+      },
+      orderBy: { methodName: 'asc' },
+    });
+    return methods;
   }
 }

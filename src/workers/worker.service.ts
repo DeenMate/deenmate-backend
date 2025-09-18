@@ -5,7 +5,7 @@ import { RedisService } from "../redis/redis.service";
 
 export interface SyncJob {
   type: "quran" | "prayer" | "hadith" | "zakat" | "audio";
-  action: "sync" | "update" | "cleanup";
+  action: "sync" | "update" | "cleanup" | "prewarm";
   data?: any;
   priority?: number;
 }

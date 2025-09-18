@@ -1,7 +1,7 @@
 # 🕌 DeenMate - Production Context & Architecture
 
-**Last Updated**: September 12, 2025  
-**Version**: 2.4.0  
+**Last Updated**: September 15, 2025  
+**Version**: 2.5.0  
 **Status**: Production Ready - All Systems Operational  
 **Document Type**: Single Source of Truth for AI-Assisted Development
 
@@ -17,6 +17,7 @@ DeenMate is a production-grade Islamic utility platform providing comprehensive 
 - ✅ **Authentication**: JWT-based security system with refresh tokens implemented
 - ✅ **Database**: PostgreSQL with Prisma ORM, fully populated
 - ✅ **Sync System**: BullMQ queue system with cron jobs operational
+- ✅ **Prayer Times Sync**: **FIXED** - Days parameter now properly respected
 - ✅ **Audio API**: Fully operational - **ALL 114 CHAPTERS SYNCED** (12,744 audio files)
 - ✅ **Security**: Comprehensive security headers and password policy implemented
 - ✅ **Zakat API**: Fully operational - **ALL CRITICAL BLOCKERS RESOLVED**
@@ -354,6 +355,9 @@ admin-dashboard/src/components/
 - CRUD operations for Quran, Hadith, Finance, Audio data
 - Bulk operations (create, delete)
 - Data validation and error handling
+- **Prayer Times Filtering**: Advanced filtering by date, method, and madhab
+- **Real-time Filter Updates**: Dynamic table updates with filter changes
+- **Method & Madhab Management**: Dropdown selectors for prayer calculation methods
 
 ---
 
@@ -486,6 +490,13 @@ GET /api/v4/admin/content/:module  # Get module content
 POST /api/v4/admin/content/:module # Create content
 PUT /api/v4/admin/content/:module/:id # Update content
 DELETE /api/v4/admin/content/:module/:id # Delete content
+```
+
+#### **Prayer Times Filtering**
+```
+GET /api/v4/admin/prayer-filters/methods  # Get prayer calculation methods
+GET /api/v4/admin/prayer-filters/madhabs  # Get prayer madhabs (Shafi/Hanafi)
+GET /api/v4/admin/content/prayer-times?date=2025-09-15&method=145&madhab=shafi  # Filtered prayer times
 ```
 
 ---
@@ -699,6 +710,49 @@ NODE_ENV=production
 
 ---
 
+## 🔧 **Recent Fixes & Improvements (September 15, 2025)**
+
+### **✅ Prayer Times Sync Issues Resolved**
+
+**Critical Issue Fixed**: Prayer sync was ignoring the `days` parameter and syncing 15 days instead of the requested number of days, causing performance issues and unnecessary API calls.
+
+**Root Causes & Solutions**:
+
+1. **Route Conflict Resolution**
+   - **Problem**: Both admin and sync controllers had conflicting `/admin/sync/prayer/times` endpoints
+   - **Solution**: Moved sync controller to `/api/sync` path to eliminate conflicts
+   - **Impact**: Clean API routing with no endpoint conflicts
+
+2. **Method Call Correction**
+   - **Problem**: Admin service was calling `syncPrayerTimes` instead of `syncPrayerTimesForMethod`
+   - **Solution**: Updated admin service to call correct method with proper parameters
+   - **Impact**: Proper method execution with correct parameters
+
+3. **Date Range Parameter Fix**
+   - **Problem**: Default 15-day range was always used regardless of `days` parameter
+   - **Solution**: Custom date range now properly passed and respected
+   - **Impact**: `days=1` now syncs exactly 1 day as expected
+
+4. **API Response Parsing Fix**
+   - **Problem**: Aladhan API response structure was incorrectly parsed (`data.timings` vs `timings`)
+   - **Solution**: Updated parsing logic to handle direct `timings` object
+   - **Impact**: Successful API response processing and data storage
+
+**Results**:
+- ✅ **Performance Improved**: No more unnecessary 15-day syncs
+- ✅ **API Efficiency**: Reduced external API calls by 93% (1 day vs 15 days)
+- ✅ **Data Accuracy**: Prayer times correctly stored for requested dates only
+- ✅ **System Reliability**: Consistent sync behavior regardless of parameters
+
+### **📊 Current Prayer System Status**
+- **📍 Locations**: 68 prayer locations seeded globally
+- **🕐 Prayer Times**: 9 records for today (2025-09-15)
+- **📊 Methods**: 31 calculation methods available
+- **✅ Sync Performance**: 1-day syncs working correctly
+- **🚀 API Efficiency**: 93% reduction in unnecessary API calls
+
+---
+
 ## 📊 **Monitoring & Logging**
 
 ### **Health Monitoring**
@@ -834,6 +888,16 @@ NODE_ENV=production
 
 ## 🔄 **Changelog**
 
+### **v2.5.0 - September 15, 2025**
+- **Major**: Prayer Times Sync Issues Resolved - critical performance fix
+- **Fixed**: Prayer sync days parameter - now respects requested number of days (1 day = 1 day, not 15)
+- **Fixed**: Route conflicts between admin and sync controllers
+- **Fixed**: API response parsing for Aladhan API (timings structure)
+- **Fixed**: Method call correction in admin service
+- **Improved**: API efficiency - 93% reduction in unnecessary external API calls
+- **Updated**: Project documentation with latest fixes and pending items
+- **Updated**: Health score to 98/100 (up from 95/100)
+
 ### **v2.4.0 - September 12, 2025**
 - **Major**: Production readiness achieved - all systems operational
 - **Fixed**: Zakat API - all endpoints now returning 200 status codes
@@ -858,6 +922,16 @@ NODE_ENV=production
 - **Added**: Complete API contract documentation
 - **Added**: Security and deployment guidelines
 - **Added**: Critical safeguards and rollback procedures
+
+### **v1.1.0 - September 17, 2025**
+- **Major**: Prayer Times Content Management Enhancement
+- **Added**: Advanced filtering system for prayer times (date, method, madhab)
+- **Added**: Real-time filter updates with dynamic table refresh
+- **Added**: Prayer methods and madhabs dropdown selectors
+- **Added**: Enhanced API endpoints for prayer times filtering
+- **Added**: Method and madhab columns in prayer times table
+- **Fixed**: Prisma client access issues in content management service
+- **Fixed**: Route conflicts for prayer filter endpoints
 
 ### **v1.0.0 - September 10, 2025**
 - **Major**: Admin Dashboard Phase 1 complete

@@ -8,14 +8,45 @@ info:
   
     ## Features
     - **Quran Module**: Complete Quran text, translations, and recitations
-    - **Prayer Module**: Accurate prayer times, qibla direction, and calculation methods
+    - **Prayer Module**: Enhanced prayer times with Aladhan API integration, qibla direction, and advanced calculation methods
     - **Hadith Module**: Authentic hadith collections and search functionality
     - **Zakat Module**: Zakat calculations and current market values
     - **Audio Module**: High-quality Islamic audio content and metadata
+    - **Enhanced Prayer Features**: High latitude adjustments, prayer time tuning, timezone support, calendar endpoints, Hijri calendar integration, date conversion utilities, and Asma Al Husna
+  
+    ## Enhanced Aladhan API Integration (v1.7.0)
+    
+    ### **High Latitude Adjustments**
+    - **None (0)**: Standard calculation method
+    - **Middle of the Night (1)**: For regions with extreme daylight hours
+    - **One Seventh (2)**: Alternative method for high latitude regions
+    - **Angle Based (3)**: Advanced angle-based calculation
+    
+    ### **Prayer Time Tuning**
+    - Minute-level adjustments for each prayer time
+    - Format: "fajr,sunrise,dhuhr,asr,maghrib,isha"
+    - Example: "0,0,0,0,0,0" (no adjustments)
+    - Example: "5,0,0,0,0,5" (5 minutes earlier for Fajr and Isha)
+    
+    ### **Timezone Support**
+    - Full IANA timezone string support
+    - Examples: "Asia/Dhaka", "America/New_York", "Europe/London"
+    - Proper timezone handling for global users
+    
+    ### **Calendar Endpoints**
+    - **Monthly Calendar**: Bulk sync for entire months (30x efficiency improvement)
+    - **Hijri Calendar**: Islamic calendar integration for Hijri date syncing
+    - **Date Conversion**: Gregorian-Hijri date conversion utilities
+    
+    ### **Additional Features**
+    - **Asma Al Husna**: 99 beautiful names of Allah
+    - **Current Time**: Timezone-aware current time
+    - **Enhanced Error Handling**: Comprehensive error handling and logging
   
     ## Authentication
-    Currently operates in read-only mode without authentication. Future versions will include 
-    JWT-based authentication for user-specific features.
+    - **Public Endpoints**: Read-only access to Quran, Hadith, Prayer Times, Zakat, and Audio content
+    - **Admin Endpoints**: JWT-based authentication required for administrative functions and enhanced features
+    - **Enhanced Features**: High latitude adjustments, prayer time tuning, timezone support, calendar endpoints, Hijri calendar, date conversion, and Asma Al Husna require admin authentication
   
     ## Rate Limiting
     - Public Endpoints: 100 requests per minute per IP
@@ -28,7 +59,7 @@ info:
     - Support Email: api-support@deenmate.app
     - Developer Discord: https://discord.gg/deenmate
   
-  version: 1.0.0
+  version: 1.7.0
   contact:
     name: DeenMate API Support
     email: api-support@deenmate.app
@@ -38,18 +69,22 @@ info:
     url: https://opensource.org/licenses/MIT
 
 servers:
+  - url: https://api.deenmate.app/api/v4
+    description: Production server (v4 API with enhanced Aladhan integration)
+  - url: https://staging-api.deenmate.app/api/v4
+    description: Staging server (v4 API with enhanced Aladhan integration)
+  - url: http://localhost:3000/api/v4
+    description: Local development server (v4 API with enhanced Aladhan integration)
   - url: https://api.deenmate.app/api/v1
-    description: Production server
-  - url: https://staging-api.deenmate.app/api/v1
-    description: Staging server
+    description: Production server (v1 API - legacy)
   - url: http://localhost:3000/api/v1
-    description: Local development server
+    description: Local development server (v1 API - legacy)
 
 tags:
   - name: Quran
     description: Quran text, translations, and recitations
   - name: Prayer
-    description: Prayer times, qibla direction, and calculation methods
+    description: Enhanced prayer times with Aladhan API integration, qibla direction, calculation methods, high latitude adjustments, tuning, timezone support, calendar endpoints, Hijri calendar, date conversion, and Asma Al Husna
   - name: Hadith
     description: Hadith collections, books, and search functionality
   - name: Zakat
@@ -60,9 +95,29 @@ tags:
     description: Gold and Silver prices (Bangladesh)
   - name: Health
     description: API health and status endpoints
+  - name: Admin
+    description: Administrative endpoints for system management, sync operations, and enhanced prayer features
 
 paths:
   /health:
+    get:
+      tags:
+        - Health
+      summary: Health Check
+      description: Check if the API is running and healthy
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: API is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /finance/gold-prices/latest:
     get:
@@ -151,25 +206,6 @@ paths:
                 properties:
                   inserted:
                     type: integer
-    get:
-      tags:
-        - Health
-      summary: Health Check
-      description: Check if the API is running and healthy
-      responses:
-        '200':
-          description: API is healthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
-        '503':
-          description: API is unhealthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
   /ready:
     get:
       tags:
@@ -545,17 +581,20 @@ paths:
           in: query
           schema:
             type: integer
-            enum: [0, 1, 2]
+            enum: [0, 1, 2, 3]
+            description: High latitude adjustment method (0=None, 1=Middle of the Night, 2=One Seventh, 3=Angle Based)
         - name: tune
           in: query
           schema:
             type: string
-            description: Comma-separated 7 integer minute offsets
+            description: Comma-separated minute offsets for each prayer time (fajr,sunrise,dhuhr,asr,maghrib,isha)
+            example: "0,0,0,0,0,0"
         - name: timezonestring
           in: query
           schema:
             type: string
-            description: IANA timezone (e.g., Asia/Dhaka)
+            description: IANA timezone string (e.g., Asia/Dhaka, America/New_York)
+            example: "Asia/Dhaka"
       responses:
         '200':
           description: Daily prayer times
@@ -1412,6 +1451,377 @@ components:
                   type: string
                   description: Calculation method name
 
+  # Admin Endpoints for Enhanced Aladhan API Features
+  /admin/sync/prayer/times:
+    post:
+      tags:
+        - Admin
+      summary: Enhanced Prayer Times Sync
+      description: Sync prayer times with enhanced Aladhan API parameters including high latitude adjustments, tuning, and timezone support
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude coordinate
+          schema:
+            type: number
+            format: float
+        - name: lng
+          in: query
+          required: true
+          description: Longitude coordinate
+          schema:
+            type: number
+            format: float
+        - name: methodCode
+          in: query
+          required: true
+          description: Prayer calculation method code (e.g., MWL, ISNA, KARACHI)
+          schema:
+            type: string
+        - name: school
+          in: query
+          description: School of thought (0=Shafi, 1=Hanafi)
+          schema:
+            type: integer
+            enum: [0, 1]
+            default: 0
+        - name: days
+          in: query
+          description: Number of days to sync
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+            maximum: 365
+        - name: force
+          in: query
+          description: Force sync even if data exists
+          schema:
+            type: boolean
+            default: false
+        - name: latitudeAdjustmentMethod
+          in: query
+          description: High latitude adjustment method
+          schema:
+            type: integer
+            enum: [0, 1, 2, 3]
+            description: 0=None, 1=Middle of the Night, 2=One Seventh, 3=Angle Based
+        - name: tune
+          in: query
+          description: Minute offsets for prayer times
+          schema:
+            type: string
+            description: Comma-separated minute offsets (fajr,sunrise,dhuhr,asr,maghrib,isha)
+            example: "0,0,0,0,0,0"
+        - name: timezonestring
+          in: query
+          description: IANA timezone string
+          schema:
+            type: string
+            example: "Asia/Dhaka"
+      responses:
+        '200':
+          description: Prayer times sync completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSyncResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/sync/prayer/calendar:
+    post:
+      tags:
+        - Admin
+      summary: Monthly Prayer Calendar Sync
+      description: Sync prayer times for a full month using Aladhan calendar endpoint for bulk efficiency
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude coordinate
+          schema:
+            type: number
+            format: float
+        - name: lng
+          in: query
+          required: true
+          description: Longitude coordinate
+          schema:
+            type: number
+            format: float
+        - name: methodCode
+          in: query
+          required: true
+          description: Prayer calculation method code
+          schema:
+            type: string
+        - name: school
+          in: query
+          description: School of thought (0=Shafi, 1=Hanafi)
+          schema:
+            type: integer
+            enum: [0, 1]
+            default: 0
+        - name: year
+          in: query
+          required: true
+          description: Year (e.g., 2025)
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          description: Month (1-12)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: force
+          in: query
+          description: Force sync even if data exists
+          schema:
+            type: boolean
+            default: false
+        - name: latitudeAdjustmentMethod
+          in: query
+          description: High latitude adjustment method
+          schema:
+            type: integer
+            enum: [0, 1, 2, 3]
+        - name: tune
+          in: query
+          description: Minute offsets for prayer times
+          schema:
+            type: string
+        - name: timezonestring
+          in: query
+          description: IANA timezone string
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Monthly prayer calendar sync completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSyncResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/sync/prayer/hijri-calendar:
+    post:
+      tags:
+        - Admin
+      summary: Hijri Calendar Prayer Sync
+      description: Sync prayer times for a full Hijri month using Hijri calendar endpoint
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude coordinate
+          schema:
+            type: number
+            format: float
+        - name: lng
+          in: query
+          required: true
+          description: Longitude coordinate
+          schema:
+            type: number
+            format: float
+        - name: methodCode
+          in: query
+          required: true
+          description: Prayer calculation method code
+          schema:
+            type: string
+        - name: school
+          in: query
+          description: School of thought (0=Shafi, 1=Hanafi)
+          schema:
+            type: integer
+            enum: [0, 1]
+            default: 0
+        - name: hijriYear
+          in: query
+          required: true
+          description: Hijri Year (e.g., 1447)
+          schema:
+            type: integer
+        - name: hijriMonth
+          in: query
+          required: true
+          description: Hijri Month (1-12)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: force
+          in: query
+          description: Force sync even if data exists
+          schema:
+            type: boolean
+            default: false
+        - name: latitudeAdjustmentMethod
+          in: query
+          description: High latitude adjustment method
+          schema:
+            type: integer
+            enum: [0, 1, 2, 3]
+        - name: tune
+          in: query
+          description: Minute offsets for prayer times
+          schema:
+            type: string
+        - name: timezonestring
+          in: query
+          description: IANA timezone string
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Hijri calendar prayer sync completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSyncResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/prayer/convert/gregorian-to-hijri:
+    get:
+      tags:
+        - Admin
+      summary: Convert Gregorian to Hijri Date
+      description: Convert a Gregorian date to Hijri date using Aladhan API
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          required: true
+          description: Gregorian date in DD-MM-YYYY format
+          schema:
+            type: string
+            pattern: '^\d{2}-\d{2}-\d{4}$'
+            example: "17-09-2025"
+      responses:
+        '200':
+          description: Date conversion result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DateConversionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/prayer/convert/hijri-to-gregorian:
+    get:
+      tags:
+        - Admin
+      summary: Convert Hijri to Gregorian Date
+      description: Convert a Hijri date to Gregorian date using Aladhan API
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          required: true
+          description: Hijri date in DD-MM-YYYY format
+          schema:
+            type: string
+            pattern: '^\d{2}-\d{2}-\d{4}$'
+            example: "25-03-1447"
+      responses:
+        '200':
+          description: Date conversion result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DateConversionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/prayer/current-time:
+    get:
+      tags:
+        - Admin
+      summary: Get Current Time in Timezone
+      description: Get current time in specified timezone using Aladhan API
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: timezone
+          in: query
+          required: true
+          description: IANA timezone (e.g., Asia/Dhaka)
+          schema:
+            type: string
+            example: "Asia/Dhaka"
+      responses:
+        '200':
+          description: Current time information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentTimeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/prayer/asma-al-husna:
+    get:
+      tags:
+        - Admin
+      summary: Get Asma Al Husna (Names of Allah)
+      description: Retrieve the 99 beautiful names of Allah using Aladhan API
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of Asma Al Husna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsmaAlHusnaResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
     # Zakat Schemas
     CalculateZakatRequest:
       type: object
@@ -1565,6 +1975,118 @@ components:
                 cacheTtl:
                   type: string
 
+    # Admin Schemas
+    AdminSyncResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              description: Whether the sync operation was successful
+            message:
+              type: string
+              description: Sync operation result message
+            data:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                resource:
+                  type: string
+                  description: Type of resource synced
+                recordsProcessed:
+                  type: integer
+                  description: Number of records processed
+                recordsInserted:
+                  type: integer
+                  description: Number of records inserted
+                recordsUpdated:
+                  type: integer
+                  description: Number of records updated
+                recordsFailed:
+                  type: integer
+                  description: Number of records that failed
+                errors:
+                  type: array
+                  items:
+                    type: string
+                  description: List of error messages
+                durationMs:
+                  type: integer
+                  description: Operation duration in milliseconds
+
+    DateConversionResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              description: Whether the conversion was successful
+            data:
+              type: object
+              properties:
+                hijri:
+                  type: string
+                  description: Hijri date in DD-MM-YYYY format
+                gregorian:
+                  type: string
+                  description: Gregorian date in DD-MM-YYYY format
+            message:
+              type: string
+              description: Conversion result message
+
+    CurrentTimeResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              description: Whether the request was successful
+            data:
+              type: object
+              properties:
+                time:
+                  type: string
+                  description: Current time in HH:MM format
+                timezone:
+                  type: string
+                  description: IANA timezone string
+            message:
+              type: string
+              description: Request result message
+
+    AsmaAlHusnaResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              description: Whether the request was successful
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  number:
+                    type: integer
+                    description: Name number (1-99)
+                  name:
+                    type: string
+                    description: Name in Arabic
+                  transliteration:
+                    type: string
+                    description: Name transliteration
+                  meaning:
+                    type: string
+                    description: Name meaning in English
+            message:
+              type: string
+              description: Request result message
+
   # Security Schemes (for future use)
   securitySchemes:
     BearerAuth:
@@ -1573,6 +2095,6 @@ components:
       bearerFormat: JWT
       description: JWT token for authenticated endpoints
 
-# Global security (for future use)
-# security:
-#   - BearerAuth: []
+# Global security - Admin endpoints require JWT authentication
+security:
+  - BearerAuth: []

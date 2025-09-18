@@ -108,3 +108,7 @@ prisma/migrations/
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Exclude large hadith dumps
+hadith-dump-sunnah-com/HadithTable.sql
+hadith-dump-sunnah-com/HadithTable.sql.gz

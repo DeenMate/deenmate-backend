@@ -3,6 +3,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { CommonHttpService } from "../../common/common.module";
 import { PrayerMapper } from "./prayer.mapper";
 import { generateLocationKey } from "../../common/utils/hash.util";
+import tzLookup from "tz-lookup";
 
 @Injectable()
 export class PrayerService {
@@ -464,11 +465,61 @@ export class PrayerService {
       // Generate location key
       const locKey = generateLocationKey(lat, lng);
 
+      // Map external method ID to internal method ID
+      const internalMethodId = await this.mapExternalMethodToInternal(method);
+
+      // Ensure a location row exists for this lat/lng (auto-create)
+      try {
+        const existing = await (this.prisma as any).prayerLocation.findUnique({
+          where: { locKey },
+          select: { id: true },
+        });
+        if (!existing) {
+          let timezone: string | null = null;
+          try {
+            timezone = tzLookup(lat, lng);
+          } catch (_) {
+            timezone = null;
+          }
+          // Try a very light reverse geocode (best-effort)
+          let city: string | undefined;
+          let country: string | undefined;
+          try {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`;
+            const res = await this.httpService.get(url, {
+              headers: { "User-Agent": "DeenMate/1.0 (contact@deenmate.app)" },
+              timeout: 5000,
+            } as any);
+            const addr = res.data?.address || {};
+            city = addr.city || addr.town || addr.village;
+            country = addr.country;
+          } catch (_) {
+            // ignore reverse geocode errors
+          }
+
+          await (this.prisma as any).prayerLocation.upsert({
+            where: { locKey },
+            update: {},
+            create: {
+              locKey,
+              lat,
+              lng,
+              city: city ?? null,
+              country: country ?? null,
+              timezone: timezone ?? null,
+              elevation: 0,
+            },
+          });
+        }
+      } catch (autoErr) {
+        this.logger.warn(`Auto-create location failed: ${String(autoErr)}`);
+      }
+
       // Try to get from database first
       const prayerTimes = await this.getPrayerTimes(
         locKey,
         date,
-        method,
+        internalMethodId,
         school,
       );
 
@@ -534,9 +585,8 @@ export class PrayerService {
           url += `/locations/${params.locKey}`;
           break;
         case "timings": {
-          const dateStr = params.date
-            ? params.date.toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0];
+          const date = params.date || new Date();
+          const dateStr = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
           const qp: string[] = [];
           qp.push(`latitude=${params.lat || 0}`);
           qp.push(`longitude=${params.lng || 0}`);
@@ -555,9 +605,8 @@ export class PrayerService {
           break;
         }
         case "timingsByCity": {
-          const dateStr = params.date
-            ? params.date.toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0];
+          const date = params.date || new Date();
+          const dateStr = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
           const qp: string[] = [];
           qp.push(`city=${encodeURIComponent(params.city)}`);
           qp.push(`country=${encodeURIComponent(params.country)}`);
@@ -731,6 +780,64 @@ export class PrayerService {
         tune,
         timezonestring,
       });
+    }
+  }
+
+  /**
+   * Map external API method ID to internal database method ID
+   * This handles the mismatch between Aladhan API method IDs and our database IDs
+   */
+  private async mapExternalMethodToInternal(externalMethodId: number): Promise<number> {
+    try {
+      // Common method mappings based on Aladhan API
+      const methodMappings: Record<number, string> = {
+        0: 'JAFARI',
+        1: 'KARACHI', 
+        2: 'ISNA',
+        3: 'MWL',
+        4: 'MAKKAH',
+        5: 'EGYPT',
+        7: 'TEHRAN',
+        8: 'GULF',
+        9: 'KUWAIT',
+        10: 'QATAR',
+        11: 'SINGAPORE',
+        12: 'FRANCE',
+        13: 'TURKEY',
+        14: 'RUSSIA',
+        15: 'MOONSIGHTING',
+        16: 'DUBAI',
+        17: 'JAKIM',
+        18: 'TUNISIA',
+        19: 'ALGERIA',
+        20: 'KEMENAG',
+        21: 'MOROCCO',
+        22: 'PORTUGAL',
+        23: 'JORDAN',
+        99: 'CUSTOM'
+      };
+
+      const methodCode = methodMappings[externalMethodId];
+      if (!methodCode) {
+        this.logger.warn(`Unknown external method ID: ${externalMethodId}, using default method 1`);
+        return 1; // Default to KARACHI method
+      }
+
+      // Find the internal method ID by method code
+      const method = await (this.prisma as any).prayerCalculationMethod.findUnique({
+        where: { methodCode },
+        select: { id: true }
+      });
+
+      if (!method) {
+        this.logger.warn(`Method code ${methodCode} not found in database, using default method 1`);
+        return 1; // Default to first method
+      }
+
+      return method.id;
+    } catch (error) {
+      this.logger.error(`Failed to map external method ID ${externalMethodId}: ${error.message}`);
+      return 1; // Default fallback
     }
   }
 }

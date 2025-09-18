@@ -137,8 +137,26 @@ export class AudioSyncService {
     let audioFilesProcessed = 0;
 
     try {
+      // Find the reciter by sourceId to get the database ID
+      const reciter = await this.prisma.quranReciter.findFirst({
+        where: { sourceId: reciterId },
+        select: { id: true, name: true }
+      });
+
+      if (!reciter) {
+        const errorMsg = `Reciter with sourceId ${reciterId} not found in database`;
+        this.logger.error(errorMsg);
+        return { 
+          success: false, 
+          recitersProcessed: 0,
+          audioFilesProcessed: 0, 
+          errors: [errorMsg],
+          durationMs: Date.now() - startTime
+        };
+      }
+
       this.logger.log(
-        `Syncing audio files for reciter ${reciterId}, chapter ${chapterId}`,
+        `Syncing audio files for reciter ${reciter.name} (DB ID: ${reciter.id}, Source ID: ${reciterId}), chapter ${chapterId}`,
       );
 
       // Fetch audio files from upstream API
@@ -180,7 +198,7 @@ export class AudioSyncService {
             where: {
               verseId_reciterId: {
                 verseId: verse.id,
-                reciterId: reciterId,
+                reciterId: reciter.id, // Use database ID, not source ID
               },
             },
             update: {
@@ -189,7 +207,7 @@ export class AudioSyncService {
             },
             create: {
               verseId: verse.id,
-              reciterId: reciterId,
+              reciterId: reciter.id, // Use database ID, not source ID
               sourceUrl: audioUrl,
               format: "mp3",
               quality: "128kbps", // Default quality
@@ -251,7 +269,7 @@ export class AudioSyncService {
       // Get all active reciters
       const reciters = await this.prisma.quranReciter.findMany({
         where: { isActive: true },
-        select: { id: true, name: true },
+        select: { id: true, sourceId: true, name: true },
       });
 
       this.logger.log(`Found ${reciters.length} active reciters`);
@@ -261,7 +279,7 @@ export class AudioSyncService {
         for (let chapterId = 1; chapterId <= 114; chapterId++) {
           try {
             const result = await this.syncAudioFilesForChapter(
-              reciter.id,
+              reciter.sourceId,
               chapterId,
             );
             totalAudioFilesProcessed += result.audioFilesProcessed;
@@ -269,7 +287,7 @@ export class AudioSyncService {
               errors.push(...result.errors);
             }
           } catch (error) {
-            const errorMsg = `Failed to sync audio for reciter ${reciter.id}, chapter ${chapterId}: ${error.message}`;
+            const errorMsg = `Failed to sync audio for reciter ${reciter.sourceId}, chapter ${chapterId}: ${error.message}`;
             this.logger.error(errorMsg);
             errors.push(errorMsg);
           }

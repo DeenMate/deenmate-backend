@@ -109,12 +109,27 @@ export class PrayerMapper {
     longitude: number,
     locKey: string,
     requestedDate?: string, // Add requested date parameter
+    methodId?: number, // Add method ID parameter
+    school?: number, // Add school parameter
+    latitudeAdjustmentMethod?: number, // Add latitude adjustment method
+    tune?: string, // Add tune parameters
+    timezone?: string, // Add timezone
+    midnightMode?: string, // Add midnight mode
   ) {
     // Use the requested date if provided, otherwise fall back to dateInfo parsing
     let date: Date;
     if (requestedDate) {
-      // Use the date that was requested in the API call
-      date = new Date(requestedDate + "T00:00:00Z");
+      // Parse the requested date (format: DD-MM-YYYY)
+      if (/^\d{2}-\d{2}-\d{4}$/.test(requestedDate)) {
+        const [dd, mm, yyyy] = requestedDate.split("-");
+        date = new Date(`${yyyy}-${mm}-${dd}T00:00:00Z`);
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+        date = new Date(requestedDate + "T00:00:00Z");
+      } else {
+        // fallback to today if format is unrecognized
+        const today = new Date();
+        date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+      }
     } else {
       // dateInfo.gregorian.date is typically DD-MM-YYYY or similar; normalize to YYYY-MM-DD
       const raw = dateInfo.gregorian?.date || "";
@@ -139,8 +154,8 @@ export class PrayerMapper {
     return {
       locKey,
       date,
-      method: 1, // Default method ID
-      school: 0, // Default school (Shafi)
+      method: methodId || 1, // Use provided method ID or default to 1
+      school: school || 0, // Use provided school or default to 0 (Shafi)
       fajr: this.parseTimeString(timings.Fajr, date),
       sunrise: this.parseTimeString(timings.Sunrise, date),
       dhuhr: this.parseTimeString(timings.Dhuhr, date),
@@ -154,10 +169,21 @@ export class PrayerMapper {
       qiblaDirection: this.calculateQiblaDirection(latitude, longitude),
       source: "aladhan",
       lastSynced: new Date(),
+      // New Aladhan API parameters
+      latitudeAdjustmentMethod: latitudeAdjustmentMethod || 0,
+      tune: tune || null,
+      timezone: timezone || null,
+      midnightMode: midnightMode || "Standard",
       rawResponse: {
         timings: timings as any,
         dateInfo: dateInfo as any,
         coordinates: { latitude, longitude },
+        parameters: {
+          latitudeAdjustmentMethod,
+          tune,
+          timezone,
+          midnightMode,
+        },
       },
     };
   }

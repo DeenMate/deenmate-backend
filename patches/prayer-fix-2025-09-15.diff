@@ -1,0 +1,53 @@
+--- a/src/modules/prayer/prayer.sync.service.ts
++++ b/src/modules/prayer/prayer.sync.service.ts
+@@ -1047,7 +1047,7 @@ export class PrayerSyncService {
+     });
+   }
+ 
+-  private getDefaultDateRange(days: number = 1): { start: Date; end: Date } {
++  private getDefaultDateRange(days: number = 1): { start: Date; end: Date } {
+     const today = new Date();
+     today.setHours(0, 0, 0, 0);
+     const start = new Date(today);
+@@ -1055,6 +1055,12 @@ export class PrayerSyncService {
+     end.setDate(today.getDate() + days - 1);
+     return { start, end };
+   }
++
++  private validateDateRange(days: number): number {
++    if (days <= 0 || days > 365) {
++      throw new Error(`Invalid days parameter: ${days}. Must be between 1 and 365.`);
++    }
++    return days;
++  }
+ }
+ 
+--- a/src/modules/prayer/prayer.sync.service.ts
++++ b/src/modules/prayer/prayer.sync.service.ts
+@@ -320,7 +320,7 @@ export class PrayerSyncService {
+ 
+       await this.ensureLocationExists(latitude, longitude);
+ 
+-      const dateRange = options.dateRange || this.getDefaultDateRange();
++      const dateRange = options.dateRange || this.getDefaultDateRange(1);
+       this.logger.log(`syncPrayerTimes: Date range: ${dateRange.start.toISOString().split('T')[0]} to ${dateRange.end.toISOString().split('T')[0]} (${options.dateRange ? 'custom' : 'default'})`);
+       this.logger.log(`Date range: ${dateRange.start.toISOString().split('T')[0]} to ${dateRange.end.toISOString().split('T')[0]} (${options.dateRange ? 'custom' : 'default'})`);
+       
+@@ -520,7 +520,7 @@ export class PrayerSyncService {
+         );
+       }
+ 
+-      const dateRange = options.dateRange || this.getDefaultDateRange();
++      const dateRange = options.dateRange || this.getDefaultDateRange(1);
+       this.logger.log(`syncPrayerTimes: Date range: ${dateRange.start.toISOString().split('T')[0]} to ${dateRange.end.toISOString().split('T')[0]} (${options.dateRange ? 'custom' : 'default'})`);
+ 
+       let totalProcessed = 0;
+@@ -810,7 +810,7 @@ export class PrayerSyncService {
+         `${location.lat.toFixed(3)},${location.lng.toFixed(3)}`,
+       );
+ 
+-      const dateRange = options.dateRange || this.getDefaultDateRange();
++      const dateRange = options.dateRange || this.getDefaultDateRange(1);
+       this.logger.log(`syncPrayerTimes: Date range: ${dateRange.start.toISOString().split('T')[0]} to ${dateRange.end.toISOString().split('T')[0]} (${options.dateRange ? 'custom' : 'default'})`);
+ 
+       let totalProcessed = 0;

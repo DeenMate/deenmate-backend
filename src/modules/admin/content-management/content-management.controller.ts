@@ -29,6 +29,7 @@ import { ContentManagementService, ContentQuery } from './content-management.ser
 export class ContentManagementController {
   constructor(private readonly contentService: ContentManagementService) {}
 
+
   @Get(':module')
   @ApiOperation({ summary: 'Get content for a specific module' })
   @ApiQuery({ name: 'page', required: false, type: 'number' })
@@ -36,6 +37,9 @@ export class ContentManagementController {
   @ApiQuery({ name: 'search', required: false, type: 'string' })
   @ApiQuery({ name: 'sortBy', required: false, type: 'string' })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
+  @ApiQuery({ name: 'date', required: false, type: 'string', description: 'Date filter for prayer times (ISO date string)' })
+  @ApiQuery({ name: 'method', required: false, type: 'string', description: 'Method ID or code for prayer times' })
+  @ApiQuery({ name: 'madhab', required: false, type: 'string', enum: ['shafi', 'hanafi'], description: 'Madhab for prayer times' })
   @ApiResponse({ status: 200, description: 'Content retrieved successfully' })
   async getContent(
     @Param('module') module: string,
@@ -44,6 +48,9 @@ export class ContentManagementController {
     @Query('search') search?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('date') date?: string,
+    @Query('method') method?: string,
+    @Query('madhab') madhab?: string,
     @Query() filters?: any,
   ) {
     const query: ContentQuery = {
@@ -52,7 +59,13 @@ export class ContentManagementController {
       search,
       sortBy,
       sortOrder,
-      filters,
+      filters: {
+        ...filters,
+        // Add prayer times specific filters
+        ...(date && { date }),
+        ...(method && { method }),
+        ...(madhab && { madhab }),
+      },
     };
 
     const result = await this.contentService.getContent(module, query);

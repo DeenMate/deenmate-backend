@@ -17,7 +17,7 @@ import { AudioSeedService } from "../modules/audio/audio.seed.service";
 import { JwtAuthGuard } from "../modules/admin/guards/jwt-auth.guard";
 
 @ApiTags("Admin v4")
-@Controller({ path: "admin/sync", version: "4" })
+@Controller({ path: "sync", version: "4" })
 @UseGuards(JwtAuthGuard)
 export class SyncController {
   constructor(
