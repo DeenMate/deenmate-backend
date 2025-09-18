@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,6 +83,17 @@ const moduleFieldConfigs: Record<string, FieldConfig[]> = {
     { key: 'lng', label: 'Longitude', type: 'number', required: true },
     { key: 'timezone', label: 'Timezone', type: 'text' },
     { key: 'elevation', label: 'Elevation', type: 'number' },
+    { key: 'date', label: 'Date', type: 'date' },
+    { key: 'method', label: 'Method', type: 'text' },
+    { key: 'methodName', label: 'Method Name', type: 'text' },
+    { key: 'madhab', label: 'Madhab', type: 'text' },
+    { key: 'fajr', label: 'Fajr', type: 'date' },
+    { key: 'sunrise', label: 'Sunrise', type: 'date' },
+    { key: 'dhuhr', label: 'Dhuhr', type: 'date' },
+    { key: 'asr', label: 'Asr', type: 'date' },
+    { key: 'maghrib', label: 'Maghrib', type: 'date' },
+    { key: 'isha', label: 'Isha', type: 'date' },
+    { key: 'lastSynced', label: 'Last Synced', type: 'date' },
     { key: 'source', label: 'Source', type: 'text' },
   ],
   hadith: [
@@ -112,6 +124,10 @@ const moduleFieldConfigs: Record<string, FieldConfig[]> = {
 };
 
 export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorProps) {
+  // URL state management hooks
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
   const [data, setData] = useState<any[]>([]);
   const [filteredData, setFilteredData] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -129,9 +145,30 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorPr
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
+  // Prayer times specific filters - Initialize from URL or defaults
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState<string>(() => 
+    searchParams.get('date') || getTodayDate()
+  );
+  const [selectedMethod, setSelectedMethod] = useState<string>(() => 
+    searchParams.get('method') || 'all' // Default to 'all' to show all methods
+  );
+  const [selectedMadhab, setSelectedMadhab] = useState<string>(() => 
+    searchParams.get('madhab') || 'all' // Default to 'all' to show all madhabs
+  );
+  const [selectedCity, setSelectedCity] = useState<string>(() => 
+    searchParams.get('city') || '' // City search filter
+  );
+  // Debounced input for city field to avoid jank while typing quickly
+  const [cityInput, setCityInput] = useState<string>(
+    searchParams.get('city') || ''
+  );
+  const [prayerMethods, setPrayerMethods] = useState<any[]>([]);
+  const [prayerMadhabs, setPrayerMadhabs] = useState<any[]>([]);
 
   const fieldConfigs = moduleFieldConfigs[moduleName.toLowerCase()] || [];
-  const itemsPerPage = 20;
+  const itemsPerPage = 5;
   const storageKey = `dm:columns:${moduleName.toLowerCase()}`;
   const sortStorageKey = `dm:sort:${moduleName.toLowerCase()}`;
 
@@ -139,15 +176,20 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorPr
     if (isOpen) {
       setCurrentPage(1);
       fetchData();
+      
+      // Load prayer methods and madhabs for prayer times module
+      if (moduleName.toLowerCase() === 'prayer times') {
+        loadPrayerFilters();
+      }
     }
   }, [isOpen, moduleName]);
 
-  // Refetch when page or search changes
+  // Refetch when page, search, or filters change
   useEffect(() => {
     if (isOpen) {
       fetchData();
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage, selectedDate, selectedMethod, selectedMadhab, selectedCity]);
 
   // Load persisted column visibility and sort
   useEffect(() => {
@@ -167,6 +209,97 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, moduleName]);
 
+  // Initialize prayer times filters from URL parameters
+  useEffect(() => {
+    if (moduleName.toLowerCase() === 'prayer times' && isOpen) {
+      const urlDate = searchParams.get('date');
+      const urlMethod = searchParams.get('method');
+      const urlMadhab = searchParams.get('madhab');
+      const urlCity = searchParams.get('city');
+      
+      if (urlDate && urlDate !== selectedDate) {
+        setSelectedDate(urlDate);
+      }
+      if (urlMethod && urlMethod !== selectedMethod) {
+        setSelectedMethod(urlMethod);
+      }
+      if (urlMadhab && urlMadhab !== selectedMadhab) {
+        setSelectedMadhab(urlMadhab);
+      }
+      if (urlCity && urlCity !== selectedCity) {
+        setSelectedCity(urlCity);
+        setCityInput(urlCity);
+      }
+    }
+  }, [searchParams, moduleName, isOpen, selectedDate, selectedMethod, selectedMadhab, selectedCity]);
+
+  // Debounce city input updates to reduce fetch churn and input lag
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (cityInput !== selectedCity) {
+        setSelectedCity(cityInput);
+        updateURL({ city: cityInput });
+      }
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityInput]);
+
+  const loadPrayerFilters = async () => {
+    try {
+      const [methodsResponse, madhabsResponse] = await Promise.all([
+        apiClient.getPrayerMethods(),
+        apiClient.getPrayerMadhabs(),
+      ]);
+      setPrayerMethods(methodsResponse.data);
+      setPrayerMadhabs(madhabsResponse.data);
+    } catch (error) {
+      console.error('Failed to load prayer filters:', error);
+    }
+  };
+
+  // URL state management function
+  const updateURL = (newFilters: { date?: string; method?: string; madhab?: string; city?: string }) => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    // Update URL parameters
+    if (newFilters.date !== undefined) {
+      if (newFilters.date) {
+        params.set('date', newFilters.date);
+      } else {
+        params.delete('date');
+      }
+    }
+    
+    if (newFilters.method !== undefined) {
+      if (newFilters.method && newFilters.method !== 'all') { // Don't store default 'all'
+        params.set('method', newFilters.method);
+      } else {
+        params.delete('method');
+      }
+    }
+    
+    if (newFilters.madhab !== undefined) {
+      if (newFilters.madhab && newFilters.madhab !== 'all') { // Don't store default 'all'
+        params.set('madhab', newFilters.madhab);
+      } else {
+        params.delete('madhab');
+      }
+    }
+    
+    if (newFilters.city !== undefined) {
+      if (newFilters.city && newFilters.city.trim() !== '') {
+        params.set('city', newFilters.city);
+      } else {
+        params.delete('city');
+      }
+    }
+    
+    // Update URL without page reload
+    const newURL = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    router.replace(newURL);
+  };
+
   const fetchData = async () => {
     setIsLoading(true);
     
@@ -174,7 +307,7 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorPr
     const supportedModules = ['quran', 'hadith', 'audio', 'finance', 'prayer', 'prayer times'];
     const moduleKey = moduleName.toLowerCase();
     const moduleMap: Record<string, string> = {
-      'prayer times': 'prayer',
+      'prayer times': 'prayer-times',
     };
     const apiModule = moduleMap[moduleKey] || moduleKey;
     
@@ -192,7 +325,16 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorPr
     
     try {
       const params: any = { page: currentPage, limit: itemsPerPage };
-      if (searchTerm) params.search = searchTerm;
+      // searchTerm removed; we use selectedCity (from debounced cityInput) for city/country search
+      
+      // Add prayer times specific filters
+      if (moduleKey === 'prayer times') {
+        params.date = selectedDate;
+        params.method = selectedMethod;
+        params.madhab = selectedMadhab;
+        if (selectedCity && selectedCity.trim() !== '') params.search = selectedCity;
+      }
+      
       const response: any = await apiClient.getContent(apiModule, params);
       const items = Array.isArray(response.data) ? response.data : (response.data ? [response.data] : []);
       // client-side sort for now (API may support sort later)
@@ -481,8 +623,8 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-6xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+      <Card className="w-full max-w-[95vw] max-h-[95vh] flex flex-col">
         <CardHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
@@ -505,45 +647,144 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorPr
             </TabsList>
 
             <TabsContent value="browse" className="flex-1 flex flex-col min-h-0">
-              <div className="flex items-center gap-4 mb-4 flex-shrink-0 relative">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search data..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+              {/* Show original search bar only for non-prayer times modules */}
+              {moduleName.toLowerCase() !== 'prayer times' && (
+                <div className="flex items-center gap-4 mb-4 flex-shrink-0 relative">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Search data..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button variant="outline" onClick={() => setShowColumnsMenu(v => !v)}>Columns</Button>
+                  <Button onClick={handleCreate}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New
+                  </Button>
+                  <Button variant="outline" onClick={fetchData}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button variant="outline" onClick={() => setShowColumnsMenu(v => !v)}>Columns</Button>
-                <Button onClick={handleCreate}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New
-                </Button>
-                <Button variant="outline" onClick={fetchData}>
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
+              )}
 
-                {showColumnsMenu && (
-                  <div className="absolute right-0 top-12 z-20 bg-white border rounded shadow p-3 w-56">
-                    <p className="text-xs text-gray-500 mb-2">Visible columns</p>
-                    <div className="space-y-2 max-h-56 overflow-auto">
-                      {fieldConfigs.map(fc => (
-                        <label key={fc.key} className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={(visibleColumns.length ? visibleColumns : fieldConfigs.map(f=>f.key)).includes(fc.key)}
-                            onChange={() => toggleColumn(fc.key)}
-                          />
-                          {fc.label}
-                        </label>
-                      ))}
+              {/* Columns Menu - positioned for both prayer times and other modules */}
+              {showColumnsMenu && (
+                <div className="absolute right-4 top-20 z-20 bg-white border rounded shadow p-3 w-56">
+                  <p className="text-xs text-gray-500 mb-2">Visible columns</p>
+                  <div className="space-y-2 max-h-56 overflow-auto">
+                    {fieldConfigs.map(fc => (
+                      <label key={fc.key} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={(visibleColumns.length ? visibleColumns : fieldConfigs.map(f=>f.key)).includes(fc.key)}
+                          onChange={() => toggleColumn(fc.key)}
+                        />
+                        {fc.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Prayer Times Filters - All in One Line */}
+              {moduleName.toLowerCase() === 'prayer times' && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {/* Date Filter */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Date:</label>
+                      <Input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => {
+                          setSelectedDate(e.target.value);
+                          updateURL({ date: e.target.value });
+                        }}
+                        className="w-40"
+                      />
+                    </div>
+                    
+                    {/* Method Filter */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Method:</label>
+                      <Select value={selectedMethod} onValueChange={(value) => {
+                        setSelectedMethod(value);
+                        updateURL({ method: value });
+                      }}>
+                        <SelectTrigger className="w-44">
+                          <SelectValue placeholder="Select method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem key="all" value="all">
+                            All Methods
+                          </SelectItem>
+                          {prayerMethods.map((method) => (
+                            <SelectItem key={method.id} value={method.id.toString()}>
+                              {method.methodName} ({method.methodCode})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Madhab Filter */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Madhab:</label>
+                      <Select value={selectedMadhab} onValueChange={(value) => {
+                        setSelectedMadhab(value);
+                        updateURL({ madhab: value });
+                      }}>
+                        <SelectTrigger className="w-36">
+                          <SelectValue placeholder="Select madhab" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem key="all" value="all">
+                            All Madhabs
+                          </SelectItem>
+                          {prayerMadhabs.map((madhab) => (
+                            <SelectItem key={madhab.code} value={madhab.code}>
+                              {madhab.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* City Search (renamed from Search) */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap">City:</label>
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3" />
+                        <Input
+                          placeholder="Search by city or country..."
+                          value={cityInput}
+                          onChange={(e) => setCityInput(e.target.value)}
+                          className="w-48 pl-7"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" onClick={() => setShowColumnsMenu(v => !v)} size="sm">
+                        Columns
+                      </Button>
+                      <Button onClick={handleCreate} size="sm">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add New
+                      </Button>
+                      <Button variant="outline" onClick={fetchData} size="sm">
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              <div className="flex-1 overflow-auto max-h-[60vh]">
+              <div className="flex-1 overflow-auto max-h-[75vh]">
                 <table className="w-full border-collapse">
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="border-b">
@@ -572,8 +813,24 @@ export function DataEditor({ moduleName, isOpen, onClose, onSave }: DataEditorPr
                               <Badge variant={item[field.key] ? 'default' : 'secondary'}>
                                 {item[field.key] ? 'Yes' : 'No'}
                               </Badge>
+                            ) : field.type === 'date' && item[field.key] ? (
+                              (() => {
+                                try {
+                                  const v = item[field.key];
+                                  const d = typeof v === 'string' || typeof v === 'number' ? new Date(v) : new Date(v);
+                                  const tz = item['timezone'] || undefined;
+                                  const isMidnight = d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
+                                  if (!isMidnight) {
+                                    const formatter = new Intl.DateTimeFormat(undefined, { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+                                    return formatter.format(d);
+                                  }
+                                  return d.toISOString().split('T')[0];
+                                } catch {
+                                  return String(item[field.key]);
+                                }
+                              })()
                             ) : (
-                              item[field.key] || 'N/A'
+                              (item[field.key] ?? 'N/A')
                             )}
                           </td>
                         ))}

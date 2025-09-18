@@ -99,6 +99,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 300000, // 5 minutes timeout for long-running sync operations
 });
 
 // Add request interceptor to automatically add auth token
@@ -207,6 +208,24 @@ export const apiClient = {
     return response.data.data;
   },
   triggerModuleSync: async (module: string): Promise<{ success: boolean; message: string }> => {
+    // Special-case prayer: call prewarm for today (days=1) to sync all cities, methods, madhabs
+    if (module === 'prayer') {
+      console.log('🕌 Prayer sync: Making request to /admin/sync/prayer/prewarm with days=1');
+      console.log('🔑 Using token:', localStorage.getItem('adminToken')?.substring(0, 20) + '...');
+      console.log('🌐 API Base URL:', API_BASE_URL);
+      
+      try {
+        const response = await api.post(`/admin/sync/prayer/prewarm`, {}, { params: { days: 1 } });
+        console.log('✅ Prayer sync response:', response.status, response.data);
+        return {
+          success: response.data.success,
+          message: response.data.message
+        };
+      } catch (error: any) {
+        console.error('❌ Prayer sync error:', error.response?.status, error.response?.data || error.message);
+        throw error;
+      }
+    }
     const response = await api.post(`/admin/sync/${module}`);
     return {
       success: response.data.success,
@@ -341,6 +360,17 @@ export const apiClient = {
     const response = await api.get(`/admin/content/${module}/export`, { 
       params: { format, ...params } 
     });
+    return response.data;
+  },
+
+  // Prayer Times specific API methods
+  getPrayerMethods: async (): Promise<{ success: boolean; data: any[] }> => {
+    const response = await api.get('/admin/prayer-filters/methods');
+    return response.data;
+  },
+
+  getPrayerMadhabs: async (): Promise<{ success: boolean; data: any[] }> => {
+    const response = await api.get('/admin/prayer-filters/madhabs');
     return response.data;
   },
 
