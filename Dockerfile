@@ -4,7 +4,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --production=false
+RUN npm ci --production=false --legacy-peer-deps
 COPY admin-dashboard/package*.json ./admin-dashboard/
 RUN cd admin-dashboard && npm ci --production=false
 
