@@ -12,9 +12,9 @@ export default function Home() {
     const token = localStorage.getItem('adminToken');
     if (token) {
       setAccessToken(token);
-      router.push('/dashboard');
+      router.push('/admin/dashboard');
     } else {
-      router.push('/login');
+      router.push('/admin/login');
     }
   }, [router]);
 

@@ -19,7 +19,7 @@ export default function DashboardPage() {
     // Check authentication
     const token = localStorage.getItem('adminToken');
     if (!token) {
-      router.push('/login');
+      router.push('/admin/login');
       return;
     }
     setAccessToken(token);
@@ -38,7 +38,7 @@ export default function DashboardPage() {
           console.log('Authentication expired, redirecting to login');
           localStorage.removeItem('adminToken');
           clearAccessToken();
-          router.push('/login');
+          router.push('/admin/login');
           return;
         }
         

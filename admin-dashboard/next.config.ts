@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   output: 'export',
   trailingSlash: true,
   distDir: 'dist',
+  assetPrefix: '/admin',
   
   // Disable ESLint during build for POC
   eslint: {

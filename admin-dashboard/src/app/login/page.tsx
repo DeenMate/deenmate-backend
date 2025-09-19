@@ -28,7 +28,7 @@ export default function LoginPage() {
       localStorage.setItem('adminToken', response.accessToken);
       
       // Redirect to dashboard
-      router.push('/dashboard');
+      router.push('/admin/dashboard');
     } catch (error: any) {
       setError(error.response?.data?.message || 'Login failed. Please check your credentials.');
       console.error('Login error:', error);
