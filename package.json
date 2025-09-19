@@ -6,7 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build:admin": "cd admin-dashboard && npm ci && npm run build",
+    "build": "npm run build:admin && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -46,6 +47,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/schedule": "^6.0.0",
+    "@nestjs/serve-static": "^5.0.3",
     "@nestjs/swagger": "^7.4.2",
     "@nestjs/terminus": "^10.0.0",
     "@prisma/client": "^5.0.0",

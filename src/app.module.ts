@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { TerminusModule } from "@nestjs/terminus";
 import { BullModule } from "@nestjs/bullmq";
+import { ServeStaticModule } from "@nestjs/serve-static";
+import { join } from "path";
 import { AppController } from "./app.controller";
 import { DatabaseModule } from "./database/database.module";
 import { RedisModule } from "./redis/redis.module";
@@ -27,6 +29,13 @@ import { SchedulerModule } from "./modules/common/scheduler.module";
       isGlobal: true,
     }),
     TerminusModule,
+
+    // Serve Static Files (Admin Dashboard)
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'admin-dashboard/.next'),
+      serveRoot: '/admin',
+      exclude: ['/api*', '/docs*'],
+    }),
 
     // BullMQ Configuration
     BullModule.forRoot({
