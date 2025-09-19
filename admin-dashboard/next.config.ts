@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Enable static export for serving via NestJS
+  output: 'export',
+  trailingSlash: true,
+  distDir: 'dist',
+  
   // Disable ESLint during build for POC
   eslint: {
     ignoreDuringBuilds: true,
