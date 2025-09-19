@@ -27,8 +27,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 # Copy built backend
 COPY --from=builder /app/dist ./dist
-# Copy next build output (.next)
-COPY --from=builder /app/admin-dashboard/.next ./admin-dashboard/.next
+# Copy next build output (dist)
+COPY --from=builder /app/admin-dashboard/dist ./admin-dashboard/dist
 # Copy package/node_modules needed at runtime
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/admin-dashboard/node_modules ./admin-dashboard/node_modules

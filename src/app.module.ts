@@ -32,7 +32,7 @@ import { SchedulerModule } from "./modules/common/scheduler.module";
 
     // Serve Static Files (Admin Dashboard)
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'admin-dashboard/.next'),
+      rootPath: join(__dirname, '..', 'admin-dashboard/dist'),
       serveRoot: '/admin',
       exclude: ['/api*', '/docs*'],
     }),

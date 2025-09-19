@@ -30,7 +30,7 @@ DeenMate is a production-grade Islamic utility platform providing comprehensive 
 
 ### **Architecture Pattern**
 - **Monolithic Backend**: Single NestJS application with modular structure
-- **Admin Dashboard**: Separate Next.js application for management
+- **Admin Dashboard**: Integrated Next.js static export served via ServeStaticModule
 - **Database**: PostgreSQL with Prisma ORM
 - **Caching**: Redis for performance optimization and session management
 - **Queue System**: BullMQ for asynchronous job processing
@@ -68,12 +68,12 @@ The DeenMate backend follows a monolithic architecture pattern with clear module
 ┌─────────────────────────────────────────────────────────────┐
 │                    DeenMate Platform                        │
 ├─────────────────────────────────────────────────────────────┤
-│  Admin Dashboard (Next.js)     │  Backend API (NestJS)      │
-│  - Port 3001                   │  - Port 3000               │
-│  - JWT Authentication          │  - JWT Authentication       │
-│  - Real-time Management        │  - RESTful APIs             │
-│  - User Management             │  - Background Jobs          │
-│  - Content Management          │  - Cron Scheduling          │
+│              Single NestJS Application                      │
+│  - Port 3000 (API + Admin Dashboard)                       │
+│  - JWT Authentication                                       │
+│  - RESTful APIs (/api/v4/*)                                │
+│  - Admin Dashboard (/admin/*)                              │
+│  - Background Jobs & Cron Scheduling                       │
 ├─────────────────────────────────────────────────────────────┤
 │                    Shared Infrastructure                     │
 │  PostgreSQL Database  │  Redis Cache  │  BullMQ Queue       │
@@ -671,13 +671,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://...
       - REDIS_URL=redis://...
+      - NEXT_PUBLIC_API_URL=/api/v4
     depends_on: [postgres, redis]
-  
-  admin-dashboard:
-    build: ./admin-dashboard
-    ports: ["3001:3001"]
-    environment:
-      - NEXT_PUBLIC_API_URL=http://backend:3000
   
   postgres:
     image: postgres:15
@@ -897,6 +892,19 @@ NODE_ENV=production
 ---
 
 ## 🔄 **Changelog**
+
+### **v2.7.0 - September 19, 2025**
+- **Major**: Admin Dashboard Integration - merged Next.js admin dashboard into NestJS monolith
+- **Architecture**: Single Node.js process serving both API and admin dashboard
+- **Added**: ServeStaticModule integration for static file serving
+- **Added**: Next.js static export configuration for optimal performance
+- **Added**: Multi-stage Docker build for admin dashboard integration
+- **Added**: Relative API URL configuration for seamless integration
+- **Added**: Comprehensive rollback procedures and documentation
+- **Updated**: Docker configuration for single-container deployment
+- **Updated**: Build scripts to include admin dashboard compilation
+- **Updated**: Project documentation with integration details
+- **Performance**: Reduced deployment complexity and resource usage
 
 ### **v2.6.0 - September 18, 2025**
 - **Major**: Complete Sync System Fixes - all sync modules now fully operational
