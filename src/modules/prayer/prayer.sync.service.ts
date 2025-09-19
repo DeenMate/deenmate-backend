@@ -37,6 +37,7 @@ export class PrayerSyncService {
   private readonly logger = new Logger(PrayerSyncService.name);
   private readonly baseUrl = "https://api.aladhan.com/v1";
   private readonly source = "aladhan";
+  private readonly isSyncEnabled: boolean;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -44,7 +45,9 @@ export class PrayerSyncService {
     private readonly mapper: PrayerMapper,
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
-  ) {}
+  ) {
+    this.isSyncEnabled = this.configService.get("SYNC_ENABLED", "true") === "true";
+  }
 
   private async sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -217,6 +220,20 @@ export class PrayerSyncService {
     const jobId = generateSyncJobId("prayer-methods", "methods", new Date());
 
     this.logger.log(`Starting prayer calculation methods sync (Job: ${jobId})`);
+
+    if (!this.isSyncEnabled) {
+      this.logger.log("Prayer calculation methods sync is disabled");
+      return {
+        success: true,
+        resource: "methods",
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        recordsFailed: 0,
+        errors: [],
+        durationMs: Date.now() - startTime,
+      };
+    }
 
     try {
       if (!options.force) {
@@ -1026,6 +1043,20 @@ export class PrayerSyncService {
     );
     this.logger.log(`[syncPrayerTimes] Options: ${JSON.stringify(options)}`);
 
+    if (!this.isSyncEnabled) {
+      this.logger.log("Prayer times sync is disabled");
+      return {
+        success: true,
+        resource: "times",
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        recordsFailed: 0,
+        errors: [],
+        durationMs: Date.now() - startTime,
+      };
+    }
+
     try {
       const locKey = generateHash(
         `${latitude.toFixed(3)},${longitude.toFixed(3)}`,
@@ -1260,6 +1291,21 @@ export class PrayerSyncService {
 
   async prewarmAllLocations(days: number = 7): Promise<PrayerSyncResult> {
     const startTime = Date.now();
+    
+    if (!this.isSyncEnabled) {
+      this.logger.log("Prayer prewarm is disabled");
+      return {
+        success: true,
+        resource: "prewarm",
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        recordsUpdated: 0,
+        recordsFailed: 0,
+        errors: [],
+        durationMs: Date.now() - startTime,
+      };
+    }
+    
     // Use UTC date to avoid timezone issues
     const now = new Date();
     const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
