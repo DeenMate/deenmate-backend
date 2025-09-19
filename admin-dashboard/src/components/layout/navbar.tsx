@@ -18,7 +18,7 @@ export function Navbar() {
       // Clear token and redirect regardless of API call success
       clearAccessToken();
       localStorage.removeItem('adminToken');
-      router.push('/login');
+      router.push('/admin/login');
     }
   };
 
@@ -30,37 +30,37 @@ export function Navbar() {
             <h1 className="text-xl font-bold text-gray-900">DeenMate Admin</h1>
             <div className="hidden md:flex space-x-1">
               <NavButton 
-                href="/dashboard"
-                isActive={pathname === '/dashboard'}
-                onClick={() => router.push('/dashboard')}
+                href="/admin/dashboard"
+                isActive={pathname === '/admin/dashboard'}
+                onClick={() => router.push('/admin/dashboard')}
               >
                 Dashboard
               </NavButton>
               <NavButton 
-                href="/modules"
-                isActive={pathname === '/modules'}
-                onClick={() => router.push('/modules')}
+                href="/admin/modules"
+                isActive={pathname === '/admin/modules'}
+                onClick={() => router.push('/admin/modules')}
               >
                 Modules
               </NavButton>
               <NavButton 
-                href="/users"
-                isActive={pathname === '/users'}
-                onClick={() => router.push('/users')}
+                href="/admin/users"
+                isActive={pathname === '/admin/users'}
+                onClick={() => router.push('/admin/users')}
               >
                 Users
               </NavButton>
               <NavButton 
-                href="/monitoring"
-                isActive={pathname === '/monitoring'}
-                onClick={() => router.push('/monitoring')}
+                href="/admin/monitoring"
+                isActive={pathname === '/admin/monitoring'}
+                onClick={() => router.push('/admin/monitoring')}
               >
                 Monitoring
               </NavButton>
               <NavButton 
-                href="/security"
-                isActive={pathname === '/security'}
-                onClick={() => router.push('/security')}
+                href="/admin/security"
+                isActive={pathname === '/admin/security'}
+                onClick={() => router.push('/admin/security')}
               >
                 Security
               </NavButton>
