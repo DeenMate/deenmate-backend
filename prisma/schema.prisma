@@ -373,3 +373,56 @@ model ZakatCalculation {
   @@index([currency])
   @@map("zakat_calculations")
 }
+
+model SyncJobControl {
+  id                  Int       @id @default(autoincrement())
+  jobId               String    @unique @map("job_id")
+  jobType             String    @map("job_type")
+  jobName             String    @map("job_name")
+  status              String    @default("pending") // pending, running, paused, completed, failed, cancelled
+  priority            Int       @default(5)
+  progressPercentage  Int       @default(0) @map("progress_percentage")
+  startedAt           DateTime? @map("started_at")
+  pausedAt            DateTime? @map("paused_at")
+  completedAt         DateTime? @map("completed_at")
+  cancelledAt         DateTime? @map("cancelled_at")
+  errorMessage        String?   @map("error_message")
+  metadata            Json?
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  auditLogs           SyncJobAuditLog[]
+
+  @@index([status])
+  @@index([jobType])
+  @@index([createdAt])
+  @@map("sync_job_control")
+}
+
+model SyncJobSchedule {
+  id               Int      @id @default(autoincrement())
+  jobType          String   @unique @map("job_type")
+  enabled          Boolean  @default(true)
+  cronExpression   String?  @map("cron_expression")
+  priority         Int      @default(5)
+  maxConcurrency   Int      @default(1) @map("max_concurrency")
+  timeoutMinutes   Int      @default(60) @map("timeout_minutes")
+  retryAttempts    Int      @default(3) @map("retry_attempts")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("sync_job_schedules")
+}
+
+model SyncJobAuditLog {
+  id           Int           @id @default(autoincrement())
+  jobId        String        @map("job_id")
+  action       String        // pause, resume, cancel, delete, priority_change
+  performedBy  String        @map("performed_by")
+  performedAt  DateTime      @default(now()) @map("performed_at")
+  metadata     Json?
+  jobControl   SyncJobControl @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([performedAt])
+  @@map("sync_job_audit_logs")
+}

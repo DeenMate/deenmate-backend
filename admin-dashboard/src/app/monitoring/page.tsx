@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/layout/navbar';
 import { apiClient } from '@/lib/api';
+import { JobControlPanel } from '@/components/job-control/JobControlPanel';
 
 interface SyncLog {
   id: string;
@@ -143,6 +144,11 @@ export default function MonitoringPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Job Control Panel */}
+        <div className="mb-8">
+          <JobControlPanel />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
