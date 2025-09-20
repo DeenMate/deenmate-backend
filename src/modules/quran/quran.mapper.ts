@@ -89,13 +89,13 @@ export interface UpstreamVerseTranslation {
 }
 
 export class QuranMapper {
-  mapChapterFromUpstream(upstream: UpstreamChapter) {
+  mapChapterFromUpstream(upstream: UpstreamChapter, banglaName?: string) {
     return {
       chapterNumber: upstream.id,
       nameArabic: upstream.name_arabic,
       nameSimple: upstream.name_simple,
       nameEnglish: upstream.translated_name?.name || null,
-      nameBangla: null, // Not available in upstream
+      nameBangla: banglaName || null,
       revelationPlace: upstream.revelation_place,
       revelationOrder: upstream.revelation_order,
       versesCount: upstream.verses_count,

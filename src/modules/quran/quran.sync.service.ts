@@ -66,6 +66,29 @@ export class QuranSyncService {
       const chapters = responseBody?.chapters || [];
       this.logger.log(`Fetched ${chapters.length} chapters from upstream`);
 
+      // Fetch Bangla translations for chapter names
+      const banglaTranslations = new Map<number, string>();
+      try {
+        for (const chapter of chapters) {
+          try {
+            const banglaResponse = await this.httpService.get<any>(
+              `${this.baseUrl}/chapters/${chapter.id}?language=bn&translations=161,162,163`,
+              { timeout: 5000 }
+            );
+            if (banglaResponse?.chapter?.translated_name?.name) {
+              banglaTranslations.set(chapter.id, banglaResponse.chapter.translated_name.name);
+            }
+            // Small delay to be respectful to the API
+            await this.delay(100);
+          } catch (error) {
+            this.logger.warn(`Failed to fetch Bangla translation for chapter ${chapter.id}: ${error.message}`);
+          }
+        }
+        this.logger.log(`Fetched Bangla translations for ${banglaTranslations.size} chapters`);
+      } catch (error) {
+        this.logger.warn(`Failed to fetch Bangla chapter translations: ${error.message}`);
+      }
+
       if (options.dryRun) {
         this.logger.log(`DRY RUN: Would process ${chapters.length} chapters`);
         return {
@@ -87,7 +110,7 @@ export class QuranSyncService {
 
       for (const chapter of chapters) {
         try {
-          const mappedChapter = this.mapper.mapChapterFromUpstream(chapter);
+          const mappedChapter = this.mapper.mapChapterFromUpstream(chapter, banglaTranslations.get(chapter.id));
 
           const result = await (this.prisma as any).quranChapter.upsert({
             where: { chapterNumber: mappedChapter.chapterNumber },
