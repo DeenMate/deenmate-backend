@@ -220,14 +220,12 @@ export class PrayerService {
     school: number = 0,
   ) {
     try {
-      const prayerTimes = await (this.prisma as any).prayerTimes.findUnique({
+      const prayerTimes = await this.prisma.prayerTimes.findFirst({
         where: {
-          locKey_date_method_school: {
-            locKey,
-            date,
-            method,
-            school,
-          },
+          locKey,
+          date,
+          method,
+          school,
         },
         select: {
           id: true,
@@ -296,14 +294,18 @@ export class PrayerService {
     qiblaDirection?: number;
     source: string;
     rawResponse?: any;
+    latitudeAdjustmentMethod?: number;
+    tune?: string;
   }) {
-    return (this.prisma as any).prayerTimes.upsert({
+    return this.prisma.prayerTimes.upsert({
       where: {
-        locKey_date_method_school: {
+        locKey_date_method_school_latitudeAdjustmentMethod_tune: {
           locKey: prayerTimes.locKey,
           date: prayerTimes.date,
           method: prayerTimes.method,
           school: prayerTimes.school,
+          latitudeAdjustmentMethod: prayerTimes.latitudeAdjustmentMethod || 0,
+          tune: prayerTimes.tune || null,
         },
       },
       update: {

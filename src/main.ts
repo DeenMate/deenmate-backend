@@ -102,5 +102,7 @@ async function bootstrap() {
   console.log(`Application is running on: http://localhost:${port}`);
   console.log(`Swagger UI:              http://localhost:${port}/docs`);
   console.log(`Swagger JSON:            http://localhost:${port}/docs-json`);
+  console.log(`Admin Dashboard:          http://localhost:${port}/admin`);
+  console.log(`Admin Login:              http://localhost:${port}/admin/login`);
 }
 bootstrap();

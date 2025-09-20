@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Job } from "bullmq";
 import { PrismaService } from "../../database/prisma.service";
 import { RedisService } from "../../redis/redis.service";
+import { QuranSyncService } from "./quran.sync.service";
 
 export interface QuranSyncJob {
   type: "chapters" | "verses" | "translations" | "reciters";
@@ -16,6 +17,7 @@ export class QuranSyncWorker {
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
+    private quranSync: QuranSyncService,
   ) {}
 
   async processJob(job: Job<QuranSyncJob>) {
@@ -53,32 +55,24 @@ export class QuranSyncWorker {
   }
 
   private async syncChapters() {
-    // TODO: Implement actual API call to Quran.com
     this.logger.log("Syncing chapters...");
-
-    // For now, just log the sync attempt
-    // In production, this would call the external API and upsert data
+    await this.quranSync.syncChapters();
   }
 
   private async syncVerses(chapterId: number) {
     this.logger.log(`Syncing verses for chapter ${chapterId}...`);
-
-    // TODO: Implement actual API call to Quran.com
-    // In production, this would call the external API and upsert data
+    await this.quranSync.syncVerses();
   }
 
   private async syncTranslations() {
     this.logger.log("Syncing translations...");
-
-    // TODO: Implement actual API call to Quran.com
-    // In production, this would call the external API and upsert data
+    await this.quranSync.syncTranslationResources();
+    await this.quranSync.syncVerseTranslations();
   }
 
   private async syncReciters() {
     this.logger.log("Syncing reciters...");
-
-    // TODO: Implement actual API call to Quran.com
-    // In production, this would call the external API and upsert data
+    // TODO: Implement reciters sync when method is available
   }
 
   private async clearCache(type: string) {

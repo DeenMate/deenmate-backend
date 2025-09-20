@@ -145,11 +145,13 @@ export class PrayerSyncService {
     maxRetries: number = 3,
   ) {
     const where = {
-      locKey_date_method_school: {
+      locKey_date_method_school_latitudeAdjustmentMethod_tune: {
         locKey: mappedTimes.locKey,
         date: mappedTimes.date,
         method: methodId ?? mappedTimes.method ?? 1,
         school: mappedTimes.school ?? 0,
+        latitudeAdjustmentMethod: mappedTimes.latitudeAdjustmentMethod || 0,
+        tune: mappedTimes.tune || null,
       },
     } as const;
 

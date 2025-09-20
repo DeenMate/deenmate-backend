@@ -586,7 +586,7 @@ export class QuranSyncService {
   }
 
   async syncVerseTranslations(
-    options: QuranSyncOptions = {},
+    options: QuranSyncOptions & { chapterNumbers?: number[] } = {},
   ): Promise<QuranSyncResult> {
     const startTime = Date.now();
     const jobId = generateSyncJobId(
@@ -648,8 +648,11 @@ export class QuranSyncService {
       let totalFailed = 0;
       const errors: string[] = [];
 
-      // Get all verses
+      // Get verses (all or specific chapters)
       const verses = await this.prisma.quranVerse.findMany({
+        where: options.chapterNumbers ? {
+          chapterNumber: { in: options.chapterNumbers }
+        } : undefined,
         orderBy: { verseNumber: 'asc' }
       });
 
@@ -668,7 +671,7 @@ export class QuranSyncService {
               { timeout: 10000 }
             );
 
-            const translations = responseBody?.translations || [];
+            const translations = responseBody?.verse?.translations || [];
             
             for (const translation of translations) {
               try {

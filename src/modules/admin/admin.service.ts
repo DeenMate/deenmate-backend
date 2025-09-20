@@ -188,10 +188,10 @@ export class AdminService {
     const [chapters, verses, translations, lastSync] = await Promise.all([
       this.prisma.quranChapter.count(),
       this.prisma.quranVerse.count(),
-      this.prisma.translationResource.count(),
+      this.prisma.verseTranslation.count(),
       this.prisma.syncJobLog.findFirst({
         where: { 
-          jobName: { in: ["quran-daily", "quran-translations", "quran-verses"] },
+          jobName: { in: ["quran-daily", "quran-translations", "quran-verses", "quran-verse-translations"] },
           status: "success"
         },
         orderBy: { startedAt: "desc" },
@@ -328,6 +328,7 @@ export class AdminService {
       await this.quranSync.syncChapters();
       await this.quranSync.syncVerses();
       await this.quranSync.syncTranslationResources();
+      await this.quranSync.syncVerseTranslations();
       return { success: true, message: "Quran sync triggered successfully" };
     } catch (error) {
       this.logger.error("Failed to trigger Quran sync", error.stack);
