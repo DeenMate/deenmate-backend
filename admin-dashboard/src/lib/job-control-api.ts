@@ -2,10 +2,16 @@ import { apiClient } from './api';
 
 export interface JobStatus {
   jobId: string;
+  jobName?: string;
+  jobType?: string;
   status: 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
   progress: number;
+  progressPercentage?: number;
+  priority?: number;
   startedAt?: string;
   completedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
   errorMessage?: string;
   metadata?: any;
 }
@@ -87,73 +93,73 @@ export interface JobControlResult {
 export const jobControlApi = {
   // Job control operations
   pauseJob: async (jobId: string): Promise<JobControlResult> => {
-    const response = await apiClient.post(`/admin/jobs/${jobId}/pause`);
+    const response = await apiClient.post(`/admin/job-control/${jobId}/pause`);
     return response.data;
   },
 
   resumeJob: async (jobId: string): Promise<JobControlResult> => {
-    const response = await apiClient.post(`/admin/jobs/${jobId}/resume`);
+    const response = await apiClient.post(`/admin/job-control/${jobId}/resume`);
     return response.data;
   },
 
   cancelJob: async (jobId: string): Promise<JobControlResult> => {
-    const response = await apiClient.post(`/admin/jobs/${jobId}/cancel`);
+    const response = await apiClient.post(`/admin/job-control/${jobId}/cancel`);
     return response.data;
   },
 
   deleteJob: async (jobId: string): Promise<JobControlResult> => {
-    const response = await apiClient.delete(`/admin/jobs/${jobId}`);
+    const response = await apiClient.delete(`/admin/job-control/${jobId}`);
     return response.data;
   },
 
   // Job status and progress
   getJobStatus: async (jobId: string): Promise<{ success: boolean; data: JobStatus }> => {
-    const response = await apiClient.get(`/admin/jobs/${jobId}/status`);
+    const response = await apiClient.get(`/admin/job-control/${jobId}/status`);
     return response.data;
   },
 
   getJobProgress: async (jobId: string): Promise<{ success: boolean; data: JobProgress }> => {
-    const response = await apiClient.get(`/admin/jobs/${jobId}/progress`);
+    const response = await apiClient.get(`/admin/job-control/${jobId}/progress`);
     return response.data;
   },
 
   // Job management
   getJobs: async (filters?: JobFilters): Promise<{ success: boolean; data: PaginatedJobs }> => {
-    const response = await apiClient.get('/admin/jobs', { params: filters });
+    const response = await apiClient.get('/admin/job-control', { params: filters });
     return response.data;
   },
 
   updateJobPriority: async (jobId: string, priority: number): Promise<JobControlResult> => {
-    const response = await apiClient.put(`/admin/jobs/${jobId}/priority`, { priority });
+    const response = await apiClient.put(`/admin/job-control/${jobId}/priority`, { priority });
     return response.data;
   },
 
   // Scheduling management
   getJobSchedules: async (): Promise<{ success: boolean; data: JobSchedule[] }> => {
-    const response = await apiClient.get('/admin/jobs/schedules');
+    const response = await apiClient.get('/admin/job-control/schedules');
     return response.data;
   },
 
   updateJobSchedule: async (jobType: string, schedule: Partial<JobSchedule>): Promise<JobControlResult> => {
-    const response = await apiClient.put(`/admin/jobs/schedules/${jobType}`, schedule);
+    const response = await apiClient.put(`/admin/job-control/schedules/${jobType}`, schedule);
     return response.data;
   },
 
   toggleJobSchedule: async (jobType: string, enabled: boolean): Promise<JobControlResult> => {
-    const response = await apiClient.post(`/admin/jobs/schedules/${jobType}/toggle`, { enabled });
+    const response = await apiClient.post(`/admin/job-control/schedules/${jobType}/toggle`, { enabled });
     return response.data;
   },
 
   // Additional endpoints
   getJobHistory: async (jobType?: string, limit?: number): Promise<{ success: boolean; data: JobHistory[] }> => {
-    const response = await apiClient.get('/admin/jobs/history', { 
+    const response = await apiClient.get('/admin/job-control/history', { 
       params: { jobType, limit } 
     });
     return response.data;
   },
 
   getQueueStatus: async (): Promise<{ success: boolean; data: QueueStatus }> => {
-    const response = await apiClient.get('/admin/jobs/queue/status');
+    const response = await apiClient.get('/admin/job-control/queue/status');
     return response.data;
   },
 };

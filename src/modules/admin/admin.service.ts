@@ -8,6 +8,7 @@ import { HadithSyncService } from "../hadith/hadith-sync.service";
 import { AudioSyncService } from "../audio/audio.sync.service";
 import { GoldPriceScheduler } from "../finance/goldprice.scheduler";
 import { GoldPriceService } from "../finance/goldprice.service";
+import { JobControlService } from "./job-control/job-control.service";
 
 export interface SystemStats {
   quran: {
@@ -58,6 +59,7 @@ export class AdminService {
     private readonly audioSync: AudioSyncService,
     private readonly goldPriceScheduler: GoldPriceScheduler,
     private readonly goldPriceService: GoldPriceService,
+    private readonly jobControlService: JobControlService,
   ) {}
 
   async getSystemStats(): Promise<SystemStats> {
@@ -325,22 +327,120 @@ export class AdminService {
 
   async triggerQuranSync(): Promise<{ success: boolean; message: string }> {
     try {
-      await this.quranSync.syncChapters();
-      await this.quranSync.syncVerses();
-      await this.quranSync.syncTranslationResources();
-      await this.quranSync.syncVerseTranslations();
+      // Create job control entry
+      const jobId = `quran-sync-${Date.now()}`;
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        'quran',
+        'Quran Data Sync',
+        'running',
+        { startedBy: 'admin', timestamp: new Date().toISOString() }
+      );
+
+      // Step 1: Sync chapters (15% of total progress)
+      await this.jobControlService.updateJobProgress(jobId, 5, 'Starting Quran sync...');
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for visibility
+      await this.jobControlService.updateJobProgress(jobId, 10, 'Syncing chapters...');
+      const chaptersResult = await this.quranSync.syncChapters();
+      await this.jobControlService.updateJobProgress(jobId, 15, 'Chapters synced successfully');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 2: Sync verses (40% of total progress - this is the longest step)
+      await this.jobControlService.updateJobProgress(jobId, 20, 'Syncing verses...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const versesResult = await this.quranSync.syncVerses();
+      await this.jobControlService.updateJobProgress(jobId, 55, 'Verses synced successfully');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 3: Sync translation resources (15% of total progress)
+      await this.jobControlService.updateJobProgress(jobId, 60, 'Syncing translation resources...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const translationsResult = await this.quranSync.syncTranslationResources();
+      await this.jobControlService.updateJobProgress(jobId, 75, 'Translation resources synced successfully');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 4: Sync verse translations (20% of total progress - this can be slow due to API calls)
+      await this.jobControlService.updateJobProgress(jobId, 80, 'Syncing verse translations...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Longer delay before the longest step
+      const verseTranslationsResult = await this.quranSync.syncVerseTranslations();
+      await this.jobControlService.updateJobProgress(jobId, 95, 'Verse translations synced successfully');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Mark as completed
+      await this.jobControlService.updateJobProgress(jobId, 100, 'Quran sync completed successfully');
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        'quran',
+        'Quran Data Sync',
+        'completed',
+        { 
+          completedAt: new Date().toISOString(),
+          chaptersProcessed: chaptersResult?.recordsProcessed || 0,
+          versesProcessed: versesResult?.recordsProcessed || 0,
+          translationsProcessed: translationsResult?.recordsProcessed || 0,
+          verseTranslationsProcessed: verseTranslationsResult?.recordsProcessed || 0
+        }
+      );
+
       return { success: true, message: "Quran sync triggered successfully" };
     } catch (error) {
       this.logger.error("Failed to trigger Quran sync", error.stack);
+      
+      // Mark job as failed
+      const jobId = `quran-sync-${Date.now()}`;
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        'quran',
+        'Quran Data Sync',
+        'failed',
+        { 
+          error: error.message,
+          failedAt: new Date().toISOString()
+        }
+      );
+
       return { success: false, message: `Quran sync failed: ${error.message}` };
     }
   }
 
   async triggerPrayerSync(): Promise<{ success: boolean; message: string }> {
     try {
+      // Create job control entry
+      const jobId = `prayer-sync-${Date.now()}`;
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        'prayer',
+        'Prayer Times Sync',
+        'running',
+        { startedBy: 'admin', timestamp: new Date().toISOString() }
+      );
+
+      // Update progress
+      await this.jobControlService.updateJobProgress(jobId, 10, 'Starting prayer prewarm...');
+      
       // Change behavior: When dashboard requests Prayer sync, run 1-day prewarm for all cities/methods/madhabs
       const res = await this.prayerSync.prewarmAllLocations(1);
-      return { success: res.success, message: res.success ? "Prayer prewarm (today) triggered successfully" : "Prayer prewarm failed" };
+      
+      if (res.success) {
+        await this.jobControlService.updateJobProgress(jobId, 100, 'Prayer prewarm completed');
+        await this.jobControlService.createOrUpdateJobControl(
+          jobId,
+          'prayer',
+          'Prayer Times Sync',
+          'completed',
+          { completedAt: new Date().toISOString() }
+        );
+        return { success: true, message: "Prayer prewarm (today) triggered successfully" };
+      } else {
+        await this.jobControlService.createOrUpdateJobControl(
+          jobId,
+          'prayer',
+          'Prayer Times Sync',
+          'failed',
+          { errorMessage: 'Prayer prewarm failed', completedAt: new Date().toISOString() }
+        );
+        return { success: false, message: "Prayer prewarm failed" };
+      }
     } catch (error) {
       this.logger.error("Failed to trigger Prayer sync", error.stack);
       return {
@@ -352,33 +452,81 @@ export class AdminService {
 
   async prewarmPrayerTimes(days: number = 7) {
     try {
-      // Queue the prayer prewarm as a background job instead of running synchronously
-      const syncJob: SyncJob = {
-        type: 'prayer',
-        action: 'prewarm',
-        data: { days },
-        priority: 1,
-      };
+      // Create job control entry for prayer prewarm
+      const jobId = `prayer-prewarm-${Date.now()}`;
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        'prayer',
+        `Prayer Times Prewarm (${days} days)`,
+        'running',
+        { startedBy: 'admin', timestamp: new Date().toISOString(), days }
+      );
 
-      // Add job to queue
-      const job = await this.workerService.addSyncJob(syncJob);
+      // Update progress
+      await this.jobControlService.updateJobProgress(jobId, 10, `Starting prayer prewarm for ${days} days...`);
       
-      this.logger.log(`Prayer prewarm job queued with ID: ${job.id}`);
+      // Run the actual prewarm
+      const res = await this.prayerSync.prewarmAllLocations(days);
       
-      return {
-        success: true,
-        message: `Prayer prewarm for ${days} days queued successfully`,
-        jobId: job.id?.toString(),
-        resource: 'times',
-        recordsProcessed: 0,
-        recordsInserted: 0,
-        recordsUpdated: 0,
-        recordsFailed: 0,
-        errors: [],
-        durationMs: 0,
-      };
+      if (res.success) {
+        await this.jobControlService.updateJobProgress(jobId, 100, 'Prayer prewarm completed successfully');
+        await this.jobControlService.createOrUpdateJobControl(
+          jobId,
+          'prayer',
+          `Prayer Times Prewarm (${days} days)`,
+          'completed',
+          { completedAt: new Date().toISOString(), days, recordsProcessed: res.recordsProcessed || 0 }
+        );
+        
+        return {
+          success: true,
+          message: `Prayer prewarm for ${days} days completed successfully`,
+          jobId: jobId,
+          resource: 'times',
+          recordsProcessed: res.recordsProcessed || 0,
+          recordsInserted: res.recordsInserted || 0,
+          recordsUpdated: res.recordsUpdated || 0,
+          recordsFailed: res.recordsFailed || 0,
+          errors: res.errors || [],
+          durationMs: res.durationMs || 0,
+        };
+      } else {
+        await this.jobControlService.createOrUpdateJobControl(
+          jobId,
+          'prayer',
+          `Prayer Times Prewarm (${days} days)`,
+          'failed',
+          { errorMessage: 'Prayer prewarm failed', completedAt: new Date().toISOString() }
+        );
+        
+        return {
+          success: false,
+          resource: 'times',
+          recordsProcessed: 0,
+          recordsInserted: 0,
+          recordsUpdated: 0,
+          recordsFailed: 0,
+          errors: ['Prayer prewarm failed'],
+          durationMs: 0,
+        };
+      }
     } catch (error) {
-      this.logger.error('Failed to queue prayer prewarm', error.stack);
+      this.logger.error('Failed to run prayer prewarm', error.stack);
+      
+      // Mark as failed if we have a jobId
+      try {
+        const jobId = `prayer-prewarm-${Date.now()}`;
+        await this.jobControlService.createOrUpdateJobControl(
+          jobId,
+          'prayer',
+          `Prayer Times Prewarm (${days} days)`,
+          'failed',
+          { errorMessage: error.message, completedAt: new Date().toISOString() }
+        );
+      } catch (jobError) {
+        this.logger.error("Failed to update job status", jobError);
+      }
+      
       return {
         success: false,
         resource: 'times',
@@ -388,7 +536,7 @@ export class AdminService {
         recordsFailed: 0,
         errors: [error.message],
         durationMs: 0,
-      } as any;
+      };
     }
   }
 
@@ -639,11 +787,102 @@ export class AdminService {
 
   async triggerAudioSync(): Promise<{ success: boolean; message: string }> {
     try {
-      await this.audioSync.syncReciters();
-      await this.audioSync.syncAllAudioFiles();
+      // Create job control entry
+      const jobId = `audio-sync-${Date.now()}`;
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        'audio',
+        'Audio Files Sync',
+        'running',
+        { startedBy: 'admin', timestamp: new Date().toISOString() }
+      );
+
+      // Step 1: Sync reciters (10% of total progress)
+      await this.jobControlService.updateJobProgress(jobId, 5, 'Starting audio sync...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await this.jobControlService.updateJobProgress(jobId, 10, 'Syncing reciters...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const recitersResult = await this.audioSync.syncReciters();
+      
+      // Step 2: Get reciters count for progress calculation
+      const reciters = await this.prisma.quranReciter.findMany({
+        where: { isActive: true },
+        select: { id: true, sourceId: true, name: true },
+      });
+      
+      const totalReciters = reciters.length;
+      const totalChapters = 114;
+      const totalSteps = totalReciters * totalChapters;
+      let processedSteps = 0;
+
+      await this.jobControlService.updateJobProgress(jobId, 15, `Found ${totalReciters} reciters, syncing audio files...`);
+
+      // Step 3: Sync audio files with progress tracking
+      for (let i = 0; i < reciters.length; i++) {
+        const reciter = reciters[i];
+        const reciterProgress = Math.floor((i / totalReciters) * 80) + 15; // 15% to 95%
+        
+        await this.jobControlService.updateJobProgress(
+          jobId, 
+          reciterProgress, 
+          `Syncing audio for reciter ${reciter.name} (${i + 1}/${totalReciters})...`
+        );
+
+        for (let chapterId = 1; chapterId <= 114; chapterId++) {
+          try {
+            const result = await this.audioSync.syncAudioFilesForChapter(
+              reciter.sourceId,
+              chapterId,
+            );
+            processedSteps++;
+            
+            // Update progress every 10 chapters or at the end
+            if (chapterId % 10 === 0 || chapterId === 114) {
+              const chapterProgress = Math.floor((processedSteps / totalSteps) * 80) + 15;
+              await this.jobControlService.updateJobProgress(
+                jobId, 
+                chapterProgress, 
+                `Syncing chapter ${chapterId} for ${reciter.name}...`
+              );
+            }
+          } catch (error) {
+            this.logger.error(`Failed to sync audio for reciter ${reciter.sourceId}, chapter ${chapterId}:`, error);
+          }
+        }
+      }
+
+      // Mark as completed
+      await this.jobControlService.updateJobProgress(jobId, 100, 'Audio sync completed successfully');
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        'audio',
+        'Audio Files Sync',
+        'completed',
+        { 
+          completedAt: new Date().toISOString(),
+          recitersProcessed: totalReciters,
+          totalSteps: totalSteps
+        }
+      );
+
       return { success: true, message: "Audio sync triggered successfully" };
     } catch (error) {
       this.logger.error("Failed to trigger Audio sync", error.stack);
+      
+      // Mark as failed if we have a jobId
+      try {
+        const jobId = `audio-sync-${Date.now()}`;
+        await this.jobControlService.createOrUpdateJobControl(
+          jobId,
+          'audio',
+          'Audio Files Sync',
+          'failed',
+          { errorMessage: error.message, completedAt: new Date().toISOString() }
+        );
+      } catch (jobError) {
+        this.logger.error("Failed to update job status", jobError);
+      }
+      
       return { success: false, message: `Audio sync failed: ${error.message}` };
     }
   }
@@ -653,13 +892,51 @@ export class AdminService {
     message: string;
   }> {
     try {
+      // Create job control entry
+      const jobId = `gold-price-sync-${Date.now()}`;
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        'finance',
+        'Gold Price Update',
+        'running',
+        { startedBy: 'admin', timestamp: new Date().toISOString() }
+      );
+
+      // Update progress
+      await this.jobControlService.updateJobProgress(jobId, 50, 'Fetching gold prices...');
       const result = await this.goldPriceService.fetchAndStore();
+
+      // Mark as completed
+      await this.jobControlService.updateJobProgress(jobId, 100, 'Gold price update completed');
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        'finance',
+        'Gold Price Update',
+        'completed',
+        { completedAt: new Date().toISOString(), recordsInserted: result.inserted }
+      );
+
       return {
         success: true,
         message: `Gold price update triggered successfully. ${result.inserted} records inserted.`,
       };
     } catch (error) {
       this.logger.error("Failed to trigger Gold price update", error.stack);
+      
+      // Mark as failed
+      try {
+        const jobId = `gold-price-sync-${Date.now()}`;
+        await this.jobControlService.createOrUpdateJobControl(
+          jobId,
+          'finance',
+          'Gold Price Update',
+          'failed',
+          { errorMessage: error.message, completedAt: new Date().toISOString() }
+        );
+      } catch (jobError) {
+        this.logger.error("Failed to update job status", jobError);
+      }
+      
       return {
         success: false,
         message: `Gold price update failed: ${error.message}`,

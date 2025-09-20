@@ -71,11 +71,11 @@ export class CommonHttpService {
       10,
     );
     this.rateLimitMax = parseInt(
-      this.configService.get("HTTP_RATE_LIMIT_MAX") || "30",
+      this.configService.get("HTTP_RATE_LIMIT_MAX") || "10", // Reduced from 30 to 10
       10,
     );
     this.rateLimitWindowMs = parseInt(
-      this.configService.get("HTTP_RATE_LIMIT_WINDOW_MS") || "1000",
+      this.configService.get("HTTP_RATE_LIMIT_WINDOW_MS") || "2000", // Increased from 1000 to 2000ms
       10,
     );
   }
@@ -171,7 +171,7 @@ export class CommonHttpService {
       try {
         const response = await firstValueFrom(
           this.httpService.get<T>(url, {
-            timeout: options.timeout || this.defaultRetryConfig.baseDelay,
+            timeout: options.timeout || 30000, // 30 seconds default timeout
             headers: options.headers,
           }),
         );
@@ -216,7 +216,7 @@ export class CommonHttpService {
       try {
         const response = await firstValueFrom(
           this.httpService.post<T>(url, data, {
-            timeout: options.timeout || this.defaultRetryConfig.baseDelay,
+            timeout: options.timeout || 30000, // 30 seconds default timeout
             headers: options.headers,
           }),
         );

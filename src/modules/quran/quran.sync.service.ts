@@ -681,17 +681,22 @@ export class QuranSyncService {
 
       this.logger.log(`Syncing translations for ${verses.length} verses with ${translationResources.length} translation resources`);
 
-      // Process verses in batches
-      const batchSize = 10;
+      // Process verses in batches (reduced batch size to avoid rate limiting)
+      const batchSize = 5;
       for (let i = 0; i < verses.length; i += batchSize) {
         const batch = verses.slice(i, i + batchSize);
         
         for (const verse of batch) {
           try {
+            // Add delay between API calls to avoid rate limiting
+            if (i > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+            }
+            
             // Get translations for this verse
             const responseBody = await this.httpService.get<any>(
               `${this.baseUrl}/verses/by_key/${verse.chapterNumber}:${verse.verseNumber}?language=en&words=false&fields=text_uthmani,text_simple,text_indopak,text_imlaei,translations,audio,verse_key,verse_number&translation_fields=text,resource_id,language_name&translations=${translationResources.map(r => r.resourceId).join(',')}`,
-              { timeout: 10000 }
+              { timeout: 30000 } // Increased timeout to 30 seconds
             );
 
             const translations = responseBody?.verse?.translations || [];

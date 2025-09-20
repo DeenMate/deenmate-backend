@@ -30,7 +30,7 @@ import {
 @ApiTags('Admin - Job Control')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller({ path: 'admin/jobs', version: '4' })
+@Controller({ path: 'admin/job-control', version: '4' })
 export class JobControlController {
   constructor(private readonly jobControlService: JobControlService) {}
 
@@ -96,6 +96,19 @@ export class JobControlController {
       message: result.message,
       data: { jobId: result.jobId, action: result.action },
       meta: { timestamp: result.timestamp },
+    };
+  }
+
+  // Queue status (must be before parameterized routes)
+  @Get('queue/status')
+  @ApiOperation({ summary: 'Get queue status' })
+  @ApiResponse({ status: 200, description: 'Queue status retrieved successfully' })
+  async getQueueStatus() {
+    const status = await this.jobControlService.getQueueStatus();
+    return {
+      success: true,
+      data: status,
+      meta: { timestamp: new Date().toISOString() },
     };
   }
 
@@ -237,18 +250,6 @@ export class JobControlController {
     return {
       success: true,
       data: history,
-      meta: { timestamp: new Date().toISOString() },
-    };
-  }
-
-  @Get('queue/status')
-  @ApiOperation({ summary: 'Get queue status' })
-  @ApiResponse({ status: 200, description: 'Queue status retrieved successfully' })
-  async getQueueStatus() {
-    const status = await this.jobControlService.getQueueStatus();
-    return {
-      success: true,
-      data: status,
       meta: { timestamp: new Date().toISOString() },
     };
   }

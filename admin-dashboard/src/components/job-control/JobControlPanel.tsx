@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { jobControlApi, JobStatus, QueueStatus } from '@/lib/job-control-api';
+import { useJobUpdates } from '@/hooks/useJobUpdates';
 
 interface JobControlPanelProps {
   refreshInterval?: number;
@@ -16,6 +17,9 @@ export function JobControlPanel({ refreshInterval = 30000 }: JobControlPanelProp
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  
+  // Real-time updates
+  const { isConnected, jobUpdates, queueStatus: realtimeQueueStatus, lastUpdate } = useJobUpdates();
 
   const fetchData = async () => {
     try {
@@ -39,6 +43,37 @@ export function JobControlPanel({ refreshInterval = 30000 }: JobControlPanelProp
     const interval = setInterval(fetchData, refreshInterval);
     return () => clearInterval(interval);
   }, [refreshInterval]);
+
+  // Update queue status from real-time updates
+  useEffect(() => {
+    if (realtimeQueueStatus) {
+      setQueueStatus(realtimeQueueStatus);
+    }
+  }, [realtimeQueueStatus]);
+
+  // Update jobs from real-time updates
+  useEffect(() => {
+    if (jobUpdates.length > 0) {
+      setJobs(prevJobs => {
+        const updatedJobs = [...prevJobs];
+        jobUpdates.forEach(update => {
+          const jobIndex = updatedJobs.findIndex(job => job.jobId === update.jobId);
+          if (jobIndex !== -1) {
+            if (update.status) {
+              updatedJobs[jobIndex] = { ...updatedJobs[jobIndex], ...update.status };
+            }
+            if (update.progress) {
+              updatedJobs[jobIndex] = { 
+                ...updatedJobs[jobIndex], 
+                progressPercentage: update.progress.progressPercentage 
+              };
+            }
+          }
+        });
+        return updatedJobs;
+      });
+    }
+  }, [jobUpdates]);
 
   const handleJobAction = async (jobId: string, action: 'pause' | 'resume' | 'cancel' | 'delete') => {
     try {
@@ -176,8 +211,18 @@ export function JobControlPanel({ refreshInterval = 30000 }: JobControlPanelProp
       {queueStatus && (
         <Card>
           <CardHeader>
-            <CardTitle>Queue Status</CardTitle>
-            <CardDescription>Current queue statistics</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Queue Status</CardTitle>
+                <CardDescription>Current queue statistics</CardDescription>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-xs text-gray-500">
+                  {isConnected ? 'Live' : 'Offline'}
+                </span>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

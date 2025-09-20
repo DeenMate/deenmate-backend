@@ -1,6 +1,7 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { WorkerService } from '../../../workers/worker.service';
+import { JobControlGateway } from './job-control.gateway';
 import {
   JobControlResult,
   JobStatus,
@@ -20,6 +21,8 @@ export class JobControlService {
   constructor(
     private prisma: PrismaService,
     private workerService: WorkerService,
+    @Inject(forwardRef(() => JobControlGateway))
+    private jobControlGateway: JobControlGateway,
   ) {}
 
   // Job control operations
@@ -51,13 +54,20 @@ export class JobControlService {
 
       this.logger.log(`Job ${jobId} paused by user ${userId}`);
 
-      return {
+      const result = {
         success: true,
         message: `Job ${jobId} paused successfully`,
         jobId,
         action: 'pause',
         timestamp: new Date(),
       };
+
+      // Emit WebSocket update (if gateway is available)
+      if (this.jobControlGateway && this.jobControlGateway.server) {
+        this.jobControlGateway.emitJobControlAction(jobId, 'pause', result);
+      }
+
+      return result;
     } catch (error) {
       this.logger.error(`Failed to pause job ${jobId}:`, error);
       throw error;
@@ -160,13 +170,13 @@ export class JobControlService {
         throw new BadRequestException(`Job ${jobId} is running and cannot be deleted`);
       }
 
+      // Log the action BEFORE deleting the job
+      await this.logJobAction(jobId, 'delete', userId);
+
       // Delete the job
       await this.prisma.syncJobControl.delete({
         where: { jobId },
       });
-
-      // Log the action
-      await this.logJobAction(jobId, 'delete', userId);
 
       this.logger.log(`Job ${jobId} deleted by user ${userId}`);
 
@@ -362,8 +372,8 @@ export class JobControlService {
       }
     }
 
-    const limit = filters.limit || 50;
-    const offset = filters.offset || 0;
+    const limit = parseInt(String(filters.limit || 50), 10);
+    const offset = parseInt(String(filters.offset || 0), 10);
 
     const [jobs, total] = await Promise.all([
       this.prisma.syncJobControl.findMany({
@@ -378,10 +388,16 @@ export class JobControlService {
     return {
       jobs: jobs.map(job => ({
         jobId: job.jobId,
+        jobName: job.jobName || `${job.jobType} Job`,
+        jobType: job.jobType,
         status: job.status as any,
         progress: job.progressPercentage,
+        progressPercentage: job.progressPercentage,
+        priority: job.priority,
         startedAt: job.startedAt,
         completedAt: job.completedAt,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
         errorMessage: job.errorMessage,
         metadata: job.metadata,
       })),
@@ -487,6 +503,23 @@ export class JobControlService {
   // Update job progress
   async updateJobProgress(jobId: string, progress: number, currentStep?: string): Promise<void> {
     try {
+      // Check if job exists before updating
+      const job = await this.prisma.syncJobControl.findUnique({
+        where: { jobId },
+        select: { jobId: true, status: true },
+      });
+
+      if (!job) {
+        this.logger.warn(`Job ${jobId} not found, skipping progress update`);
+        return;
+      }
+
+      // Don't update progress for cancelled or deleted jobs
+      if (['cancelled', 'failed', 'completed'].includes(job.status)) {
+        this.logger.warn(`Job ${jobId} is ${job.status}, skipping progress update`);
+        return;
+      }
+
       await this.prisma.syncJobControl.update({
         where: { jobId },
         data: {
@@ -495,6 +528,16 @@ export class JobControlService {
           updatedAt: new Date(),
         },
       });
+
+      // Emit WebSocket progress update (if gateway is available)
+      if (this.jobControlGateway && this.jobControlGateway.server) {
+        this.jobControlGateway.emitJobProgressUpdate(jobId, {
+          jobId,
+          progressPercentage: progress,
+          currentStep,
+          lastUpdated: new Date(),
+        });
+      }
     } catch (error) {
       this.logger.error(`Failed to update job progress for ${jobId}:`, error);
     }

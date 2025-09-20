@@ -378,4 +378,25 @@ export const apiClient = {
     const response = await api.post(`/admin/content/${module}/import`, { data, format });
     return response.data;
   },
+
+  // Generic HTTP methods for job control and other APIs
+  get: async (url: string, config?: any): Promise<any> => {
+    const response = await api.get(url, config);
+    return response;
+  },
+
+  post: async (url: string, data?: any, config?: any): Promise<any> => {
+    const response = await api.post(url, data, config);
+    return response;
+  },
+
+  put: async (url: string, data?: any, config?: any): Promise<any> => {
+    const response = await api.put(url, data, config);
+    return response;
+  },
+
+  delete: async (url: string, config?: any): Promise<any> => {
+    const response = await api.delete(url, config);
+    return response;
+  },
 };

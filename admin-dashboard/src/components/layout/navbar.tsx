@@ -58,6 +58,13 @@ export function Navbar() {
                 Monitoring
               </NavButton>
               <NavButton 
+                href="/admin/jobs"
+                isActive={pathname === '/admin/jobs'}
+                onClick={() => router.push('/admin/jobs')}
+              >
+                Jobs
+              </NavButton>
+              <NavButton 
                 href="/admin/security"
                 isActive={pathname === '/admin/security'}
                 onClick={() => router.push('/admin/security')}
