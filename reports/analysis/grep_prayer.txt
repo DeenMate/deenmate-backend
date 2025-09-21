@@ -1,0 +1,361 @@
+src/app.module.ts:17:import { PrayerModule } from "./modules/prayer/prayer.module";
+src/common/utils/hash.util.ts:4: * Generate a location key for prayer times based on latitude and longitude
+src/workers/worker.module.ts:8:import { PrayerModule } from '../modules/prayer/prayer.module';
+src/workers/worker.service.ts:7:  type: "quran" | "prayer" | "hadith" | "zakat" | "audio" | "finance";
+src/workers/worker.service.ts:14:  type: "quran" | "prayer" | "hadith" | "zakat" | "audio";
+src/workers/worker.service.ts:166:          keys: ["quran:chapters", "prayer:methods", "hadith:collections"],
+src/workers/sync-jobs.processor.ts:8:import { PrayerSyncService } from '../modules/prayer/prayer.sync.service';
+src/workers/sync-jobs.processor.ts:9:import { PrayerPrerequisitesService } from '../modules/prayer/prayer-prerequisites.service';
+src/workers/sync-jobs.processor.ts:24:    private readonly prayerSyncService: PrayerSyncService,
+src/workers/sync-jobs.processor.ts:25:    private readonly prayerPrerequisitesService: PrayerPrerequisitesService,
+src/workers/sync-jobs.processor.ts:60:        case 'prayer':
+src/workers/sync-jobs.processor.ts:111:      'prayer': 'Prayer Times Sync',
+src/workers/sync-jobs.processor.ts:557:        this.logger.log(`Starting prayer prewarm for ${days} days`);
+src/workers/sync-jobs.processor.ts:559:        const prewarmResult = await this.prayerSyncService.prewarmAllLocations(days);
+src/workers/sync-jobs.processor.ts:570:      this.logger.log('Checking prayer sync prerequisites...');
+src/workers/sync-jobs.processor.ts:571:      const prerequisiteResult = await this.prayerPrerequisitesService.validateAndFixPrerequisites();
+src/workers/sync-jobs.processor.ts:586:      const methodsResult = await this.prayerSyncService.syncCalculationMethods({ force: data?.force || false });
+src/workers/sync-jobs.processor.ts:591:      // First, ensure we have prayer locations by syncing comprehensive city list
+src/workers/sync-jobs.processor.ts:592:      this.logger.log('Ensuring prayer locations exist by syncing comprehensive city list...');
+src/workers/sync-jobs.processor.ts:675:          await this.prayerSyncService.syncPrayerTimes(
+src/workers/sync-jobs.processor.ts:694:      // Now get all prayer locations (including the ones we just created)
+src/workers/sync-jobs.processor.ts:695:      const locations = await this.prisma.prayerLocation.findMany({
+src/workers/sync-jobs.processor.ts:699:      this.logger.log(`Found ${locations.length} prayer locations to sync times for`);
+src/workers/sync-jobs.processor.ts:702:      const methods = await this.prisma.prayerCalculationMethod.findMany({
+src/workers/sync-jobs.processor.ts:711:      const prayerTimesResults = [];
+src/workers/sync-jobs.processor.ts:722:              this.logger.log(`Syncing prayer times for ${location.city || 'Unknown'} (${method.methodCode}, madhab: ${madhab})...`);
+src/workers/sync-jobs.processor.ts:723:              const result = await this.prayerSyncService.syncPrayerTimes(
+src/workers/sync-jobs.processor.ts:730:              prayerTimesResults.push({ 
+src/workers/sync-jobs.processor.ts:740:              this.logger.error(`Failed to sync prayer times for ${location.city || 'Unknown'} (${method.methodCode}, madhab: ${madhab}): ${error.message}`);
+src/workers/sync-jobs.processor.ts:741:              prayerTimesResults.push({ 
+src/workers/sync-jobs.processor.ts:761:        prayerTimes: prayerTimesResults,
+src/sync/sync.cron.service.ts:5:import { PrayerSyncService } from "../modules/prayer/prayer.sync.service";
+src/sync/sync.cron.service.ts:14:    private readonly prayerSyncService: PrayerSyncService,
+src/sync/sync.cron.service.ts:59:      this.logger.log("Daily prayer sync is disabled");
+src/sync/sync.cron.service.ts:63:    this.logger.log("Starting daily prayer sync...");
+src/sync/sync.cron.service.ts:68:        await this.prayerSyncService.syncCalculationMethods();
+src/sync/sync.cron.service.ts:73:      // Sync prayer times for major cities
+src/sync/sync.cron.service.ts:76:      this.logger.log("Daily prayer sync completed successfully");
+src/sync/sync.cron.service.ts:78:      this.logger.error(`Daily prayer sync failed: ${error.message}`);
+src/sync/sync.cron.service.ts:89:    this.logger.log("Starting prayer times pre-warm...");
+src/sync/sync.cron.service.ts:92:      // Pre-warm prayer times for major cities to ensure they're available
+src/sync/sync.cron.service.ts:109:    this.logger.log("Starting prayer times pre-warm (midnight UTC)...");
+src/sync/sync.cron.service.ts:141:        this.logger.log(`Syncing prayer times for ${city.name}...`);
+src/sync/sync.cron.service.ts:143:        const result = await this.prayerSyncService.syncPrayerTimes(
+src/sync/sync.cron.service.ts:157:          `Failed to sync prayer times for ${city.name}: ${error.message}`,
+src/sync/sync.cron.service.ts:191:    this.logger.log(`Starting manual prayer sync (force: ${force})...`);
+src/sync/sync.cron.service.ts:194:      const methodsResult = await this.prayerSyncService.syncCalculationMethods(
+src/sync/sync.cron.service.ts:198:      // Sync prayer times for a few major cities
+src/sync/sync.cron.service.ts:205:      const prayerTimesResults = [];
+src/sync/sync.cron.service.ts:208:          const result = await this.prayerSyncService.syncPrayerTimes(
+src/sync/sync.cron.service.ts:213:          prayerTimesResults.push({ city: city.name, result });
+src/sync/sync.cron.service.ts:215:          prayerTimesResults.push({ city: city.name, error: error.message });
+src/sync/sync.cron.service.ts:221:        prayerTimes: prayerTimesResults,
+src/sync/sync.cron.service.ts:224:      this.logger.error(`Manual prayer sync failed: ${error.message}`);
+src/sync/sync.module.ts:8:import { PrayerModule } from "../modules/prayer/prayer.module";
+src/sync/sync.controller.ts:14:import { PrayerSyncService } from "../modules/prayer/prayer.sync.service";
+src/sync/sync.controller.ts:26:    private readonly prayerSyncService: PrayerSyncService,
+src/sync/sync.controller.ts:80:  @Post("prayer")
+src/sync/sync.controller.ts:92:          await this.prayerSyncService.syncCalculationMethods({ dryRun: true });
+src/sync/sync.controller.ts:94:        // Dry run for prayer times (just one city)
+src/sync/sync.controller.ts:95:        const prayerTimesResult = await this.prayerSyncService.syncPrayerTimes(
+src/sync/sync.controller.ts:106:            prayerTimes: prayerTimesResult,
+src/sync/sync.controller.ts:140:        const prayerResult =
+src/sync/sync.controller.ts:148:            prayer: prayerResult,
+src/sync/sync.controller.ts:154:      const [quranResult, prayerResult, audioResult] = await Promise.all([
+src/sync/sync.controller.ts:165:          prayer: prayerResult,
+src/sync/sync.controller.ts:262:  @Post("prayer/methods")
+src/sync/sync.controller.ts:272:      const result = await this.prayerSyncService.syncCalculationMethods({
+src/sync/sync.controller.ts:291:  @Post("prayer/times")
+src/sync/sync.controller.ts:319:      const result = await this.prayerSyncService.syncPrayerTimes(
+src/sync/sync.controller.spec.ts:6:import { PrayerSyncService } from "../modules/prayer/prayer.sync.service";
+src/sync/sync.controller.spec.ts:14:  let prayerSyncService: PrayerSyncService;
+src/sync/sync.controller.spec.ts:74:    prayerSyncService = module.get<PrayerSyncService>(PrayerSyncService);
+src/sync/sync.controller.spec.ts:139:      expect(prayerSyncService.syncCalculationMethods).toHaveBeenCalledWith({ dryRun: true });
+src/sync/sync.controller.spec.ts:140:      expect(prayerSyncService.syncPrayerTimes).toHaveBeenCalledWith(21.4225, 39.8262, { dryRun: true });
+src/sync/sync.controller.spec.ts:161:        prayer: { processed: 115, errors: 0 },
+src/modules/prayer/prayer.sync.service.ts:5:import { PrayerMapper, UpstreamCalculationMethod } from "./prayer.mapper";
+src/modules/prayer/prayer.sync.service.ts:161:        return await (this.prisma as any).prayerTimes.create({
+src/modules/prayer/prayer.sync.service.ts:189:          return await (this.prisma as any).prayerTimes.update({
+src/modules/prayer/prayer.sync.service.ts:222:    const jobId = generateSyncJobId("prayer-methods", "methods", new Date());
+src/modules/prayer/prayer.sync.service.ts:224:    this.logger.log(`Starting prayer calculation methods sync (Job: ${jobId})`);
+src/modules/prayer/prayer.sync.service.ts:281:        `Fetched ${methods.length} prayer calculation methods from upstream`,
+src/modules/prayer/prayer.sync.service.ts:312:          ).prayerCalculationMethod.upsert({
+src/modules/prayer/prayer.sync.service.ts:337:      await this.logSyncJob("prayer-methods", "methods", {
+src/modules/prayer/prayer.sync.service.ts:371:      await this.logSyncJob("prayer-methods", "methods", {
+src/modules/prayer/prayer.sync.service.ts:402:    const jobId = generateSyncJobId("prayer-times", "times", new Date());
+src/modules/prayer/prayer.sync.service.ts:405:      `[syncPrayerTimesForMethod] Starting prayer times sync for ${latitude},${longitude} method=${methodId} school=${school} (Job: ${jobId})`,
+src/modules/prayer/prayer.sync.service.ts:417:          this.logger.log("Skipping prayer times sync - recent sync detected");
+src/modules/prayer/prayer.sync.service.ts:458:            const methodRecord = await (this.prisma as any).prayerCalculationMethod.findUnique({
+src/modules/prayer/prayer.sync.service.ts:552:          this.logger.error(`Failed to sync prayer times for ${d.toISOString().split('T')[0]}:`, error);
+src/modules/prayer/prayer.sync.service.ts:602:   * Sync prayer times using Aladhan calendar endpoint for bulk efficiency
+src/modules/prayer/prayer.sync.service.ts:615:    const jobId = generateSyncJobId("prayer-times", "calendar", new Date());
+src/modules/prayer/prayer.sync.service.ts:649:        const methodRecord = await (this.prisma as any).prayerCalculationMethod.findUnique({
+src/modules/prayer/prayer.sync.service.ts:819:   * Sync prayer times using Hijri calendar endpoint
+src/modules/prayer/prayer.sync.service.ts:832:    const jobId = generateSyncJobId("prayer-times", "hijri-calendar", new Date());
+src/modules/prayer/prayer.sync.service.ts:866:        const methodRecord = await (this.prisma as any).prayerCalculationMethod.findUnique({
+src/modules/prayer/prayer.sync.service.ts:1041:    const jobId = generateSyncJobId("prayer-times", "times", new Date());
+src/modules/prayer/prayer.sync.service.ts:1044:      `[syncPrayerTimes] Starting prayer times sync for ${latitude},${longitude} (Job: ${jobId})`,
+src/modules/prayer/prayer.sync.service.ts:1070:          this.logger.log("Skipping prayer times sync - recent sync detected");
+src/modules/prayer/prayer.sync.service.ts:1091:        ).prayerCalculationMethod.findUnique({ where: { methodCode: "MWL" } });
+src/modules/prayer/prayer.sync.service.ts:1098:        ).prayerCalculationMethod.findUnique({ where: { methodCode: "MWL" } });
+src/modules/prayer/prayer.sync.service.ts:1102:          `Unable to resolve prayer method ID (MWL): ${e instanceof Error ? e.message : e}`,
+src/modules/prayer/prayer.sync.service.ts:1150:                const cacheKey = `prayer:timings:${latitude}:${longitude}:${dateStr}:${1}:${0}:${1}:${0}:${"auto"}:${0}:${false}`;
+src/modules/prayer/prayer.sync.service.ts:1214:                  `Failed to cache prayer timings for ${latitude},${longitude} ${dateStr}: ${cacheErr instanceof Error ? cacheErr.message : cacheErr}`,
+src/modules/prayer/prayer.sync.service.ts:1225:              const errorMsg = `Failed to sync prayer times for ${dateStr}: ${timeError.message}`;
+src/modules/prayer/prayer.sync.service.ts:1233:          const errorMsg = `Failed to fetch prayer times for date ${d.toISOString().split("T")[0]}: ${dateError.message}`;
+src/modules/prayer/prayer.sync.service.ts:1239:      await this.logSyncJob("prayer-times", "times", {
+src/modules/prayer/prayer.sync.service.ts:1271:      await this.logSyncJob("prayer-times", "times", {
+src/modules/prayer/prayer.sync.service.ts:1316:    const locations = await (this.prisma as any).prayerLocation.findMany({
+src/modules/prayer/prayer.sync.service.ts:1322:    const methods = await (this.prisma as any).prayerCalculationMethod.findMany({
+src/modules/prayer/prayer.sync.service.ts:1390:    const jobId = generateSyncJobId("prayer-times", "times", new Date());
+src/modules/prayer/prayer.sync.service.ts:1393:      `Starting prayer times sync for ${city}, ${country} method=${methodId} school=${school} (Job: ${jobId})`,
+src/modules/prayer/prayer.sync.service.ts:1398:      const location = await (this.prisma as any).prayerLocation.findFirst({
+src/modules/prayer/prayer.sync.service.ts:1429:            const methodRecord = await (this.prisma as any).prayerCalculationMethod.findUnique({
+src/modules/prayer/prayer.sync.service.ts:1523:          this.logger.error(`Failed to sync prayer times for ${d.toISOString().split('T')[0]}:`, error);
+src/modules/prayer/prayer.sync.service.ts:1585:      const existing = await (this.prisma as any).prayerTimes.findFirst({
+src/modules/prayer/prayer.sync.service.ts:1590:        await (this.prisma as any).prayerTimes.updateMany({
+src/modules/prayer/prayer.sync.service.ts:1611:        await (this.prisma as any).prayerTimes.create({
+src/modules/prayer/prayer.sync.service.ts:1617:      this.logger.error(`Failed to upsert prayer times record: ${error.message}`);
+src/modules/prayer/prayer.sync.service.ts:1631:    await (this.prisma as any).prayerLocation.upsert({
+src/modules/prayer/prayer.sync.service.ts:1670:        jobName: `prayer-${resource}`,
+src/modules/prayer/prayer.sync.service.ts:1685:        jobName: `prayer-${resource}`,
+src/modules/prayer/prayer.service.ts:4:import { PrayerMapper } from "./prayer.mapper";
+src/modules/prayer/prayer.service.ts:24:      ).prayerCalculationMethod.findMany({
+src/modules/prayer/prayer.service.ts:74:      ).prayerCalculationMethod.findUnique({
+src/modules/prayer/prayer.service.ts:112:      const locations = await (this.prisma as any).prayerLocation.findMany({
+src/modules/prayer/prayer.service.ts:151:      const location = await (this.prisma as any).prayerLocation.findUnique({
+src/modules/prayer/prayer.service.ts:196:    return (this.prisma as any).prayerLocation.upsert({
+src/modules/prayer/prayer.service.ts:223:      const prayerTimes = await this.prisma.prayerTimes.findFirst({
+src/modules/prayer/prayer.service.ts:251:      if (!prayerTimes) {
+src/modules/prayer/prayer.service.ts:266:        data: prayerTimes,
+src/modules/prayer/prayer.service.ts:270:        `Failed to get prayer times from database: ${error.message}`,
+src/modules/prayer/prayer.service.ts:281:  async savePrayerTimes(prayerTimes: {
+src/modules/prayer/prayer.service.ts:300:    return this.prisma.prayerTimes.upsert({
+src/modules/prayer/prayer.service.ts:303:          locKey: prayerTimes.locKey,
+src/modules/prayer/prayer.service.ts:304:          date: prayerTimes.date,
+src/modules/prayer/prayer.service.ts:305:          method: prayerTimes.method,
+src/modules/prayer/prayer.service.ts:306:          school: prayerTimes.school,
+src/modules/prayer/prayer.service.ts:307:          latitudeAdjustmentMethod: prayerTimes.latitudeAdjustmentMethod || 0,
+src/modules/prayer/prayer.service.ts:308:          tune: prayerTimes.tune || null,
+src/modules/prayer/prayer.service.ts:312:        fajr: prayerTimes.fajr,
+src/modules/prayer/prayer.service.ts:313:        sunrise: prayerTimes.sunrise,
+src/modules/prayer/prayer.service.ts:314:        dhuhr: prayerTimes.dhuhr,
+src/modules/prayer/prayer.service.ts:315:        asr: prayerTimes.asr,
+src/modules/prayer/prayer.service.ts:316:        maghrib: prayerTimes.maghrib,
+src/modules/prayer/prayer.service.ts:317:        isha: prayerTimes.isha,
+src/modules/prayer/prayer.service.ts:318:        imsak: prayerTimes.imsak,
+src/modules/prayer/prayer.service.ts:319:        midnight: prayerTimes.midnight,
+src/modules/prayer/prayer.service.ts:320:        qiblaDirection: prayerTimes.qiblaDirection,
+src/modules/prayer/prayer.service.ts:321:        source: prayerTimes.source,
+src/modules/prayer/prayer.service.ts:322:        rawResponse: prayerTimes.rawResponse,
+src/modules/prayer/prayer.service.ts:326:        locKey: prayerTimes.locKey,
+src/modules/prayer/prayer.service.ts:327:        date: prayerTimes.date,
+src/modules/prayer/prayer.service.ts:328:        method: prayerTimes.method,
+src/modules/prayer/prayer.service.ts:329:        school: prayerTimes.school,
+src/modules/prayer/prayer.service.ts:330:        fajr: prayerTimes.fajr,
+src/modules/prayer/prayer.service.ts:331:        sunrise: prayerTimes.sunrise,
+src/modules/prayer/prayer.service.ts:332:        dhuhr: prayerTimes.dhuhr,
+src/modules/prayer/prayer.service.ts:333:        asr: prayerTimes.asr,
+src/modules/prayer/prayer.service.ts:334:        maghrib: prayerTimes.maghrib,
+src/modules/prayer/prayer.service.ts:335:        isha: prayerTimes.isha,
+src/modules/prayer/prayer.service.ts:336:        imsak: prayerTimes.imsak,
+src/modules/prayer/prayer.service.ts:337:        midnight: prayerTimes.midnight,
+src/modules/prayer/prayer.service.ts:338:        qiblaDirection: prayerTimes.qiblaDirection,
+src/modules/prayer/prayer.service.ts:339:        source: prayerTimes.source,
+src/modules/prayer/prayer.service.ts:340:        rawResponse: prayerTimes.rawResponse,
+src/modules/prayer/prayer.service.ts:361:      const prayerTimes = await (this.prisma as any).prayerTimes.findMany({
+src/modules/prayer/prayer.service.ts:389:      if (prayerTimes.length === 0) {
+src/modules/prayer/prayer.service.ts:391:          `No monthly prayer times found for ${locKey} in ${year}-${month}, falling back to upstream API`,
+src/modules/prayer/prayer.service.ts:410:        data: prayerTimes,
+src/modules/prayer/prayer.service.ts:414:        `Failed to get monthly prayer times from database: ${error.message}`,
+src/modules/prayer/prayer.service.ts:475:        const existing = await (this.prisma as any).prayerLocation.findUnique({
+src/modules/prayer/prayer.service.ts:502:          await (this.prisma as any).prayerLocation.upsert({
+src/modules/prayer/prayer.service.ts:521:      const prayerTimes = await this.getPrayerTimes(
+src/modules/prayer/prayer.service.ts:528:      if (!prayerTimes || prayerTimes.code !== 200) {
+src/modules/prayer/prayer.service.ts:549:          prayerTimes: prayerTimes.data,
+src/modules/prayer/prayer.service.ts:556:      this.logger.error(`Failed to get daily prayer times: ${error.message}`);
+src/modules/prayer/prayer.service.ts:696:    // This method should be implemented with actual prayer time calculation
+src/modules/prayer/prayer.service.ts:714:      this.logger.log(`Getting prayer times for ${city}, ${country}`);
+src/modules/prayer/prayer.service.ts:717:      // as we don't store city-based prayer times in our database
+src/modules/prayer/prayer.service.ts:729:      this.logger.error(`Failed to get prayer times by city: ${error.message}`);
+src/modules/prayer/prayer.service.ts:756:        `Getting prayer calendar for ${lat},${lng} - ${month}/${year}`,
+src/modules/prayer/prayer.service.ts:773:      this.logger.error(`Failed to get prayer calendar: ${error.message}`);
+src/modules/prayer/prayer.service.ts:829:      const method = await (this.prisma as any).prayerCalculationMethod.findUnique({
+src/modules/prayer/prayer-prerequisites.service.ts:3:import { PrayerSyncService } from './prayer.sync.service';
+src/modules/prayer/prayer-prerequisites.service.ts:18:    private prayerSyncService: PrayerSyncService,
+src/modules/prayer/prayer-prerequisites.service.ts:26:      // Check if prayer calculation methods exist
+src/modules/prayer/prayer-prerequisites.service.ts:27:      const methodCount = await this.prisma.prayerCalculationMethod.count();
+src/modules/prayer/prayer-prerequisites.service.ts:32:      // Check if we have at least one prayer location
+src/modules/prayer/prayer-prerequisites.service.ts:33:      const locationCount = await this.prisma.prayerLocation.count();
+src/modules/prayer/prayer-prerequisites.service.ts:39:      const schoolCount = await this.prisma.prayerCalculationMethod.count({
+src/modules/prayer/prayer-prerequisites.service.ts:58:        ? 'All prerequisites are met for prayer sync'
+src/modules/prayer/prayer-prerequisites.service.ts:68:      this.logger.error('Failed to check prayer prerequisites:', error);
+src/modules/prayer/prayer-prerequisites.service.ts:88:      this.logger.log('Starting prayer prerequisites auto-fix...');
+src/modules/prayer/prayer-prerequisites.service.ts:90:      // Fix prayer calculation methods
+src/modules/prayer/prayer-prerequisites.service.ts:92:        const methodsResult = await this.prayerSyncService.syncCalculationMethods({
+src/modules/prayer/prayer-prerequisites.service.ts:101:        this.logger.error('Failed to sync prayer calculation methods:', error);
+src/modules/prayer/prayer-prerequisites.service.ts:109:      // Fix prayer locations by syncing major cities
+src/modules/prayer/prayer-prerequisites.service.ts:130:            const result = await this.prayerSyncService.syncPrayerTimes(
+src/modules/prayer/prayer-prerequisites.service.ts:160:        this.logger.error('Failed to sync prayer locations:', error);
+src/modules/prayer/prayer-prerequisites.service.ts:169:        ? 'All prayer prerequisites fixed successfully'
+src/modules/prayer/prayer-prerequisites.service.ts:170:        : 'Some prayer prerequisites failed to fix';
+src/modules/prayer/prayer-prerequisites.service.ts:175:      this.logger.error('Failed to fix prayer prerequisites:', error);
+src/modules/prayer/tests/admin.controller.spec.ts:267:    it('should trigger prayer sync successfully', async () => {
+src/modules/prayer/tests/admin.controller.spec.ts:282:    it('should handle prayer sync failures', async () => {
+src/modules/prayer/tests/prayer.sync.service.spec.ts:3:import { PrayerSyncService } from '../prayer.sync.service';
+src/modules/prayer/tests/prayer.sync.service.spec.ts:6:import { PrayerMapper } from '../prayer.mapper';
+src/modules/prayer/tests/prayer.sync.service.spec.ts:24:            prayerTimes: {
+src/modules/prayer/tests/prayer.sync.service.spec.ts:30:            prayerLocation: {
+src/modules/prayer/tests/prayer.sync.service.spec.ts:34:            prayerCalculationMethod: {
+src/modules/prayer/tests/prayer.sync.service.spec.ts:177:      (prismaService as any).prayerCalculationMethod.findUnique.mockResolvedValue(mockMethod);
+src/modules/prayer/tests/prayer.sync.service.spec.ts:178:      (prismaService as any).prayerLocation.upsert.mockResolvedValue({});
+src/modules/prayer/tests/prayer.sync.service.spec.ts:205:      (prismaService as any).prayerTimes.create.mockResolvedValue({});
+src/modules/prayer/tests/prayer.sync.service.spec.ts:223:      (prismaService as any).prayerCalculationMethod.findUnique.mockResolvedValue(mockMethod);
+src/modules/prayer/tests/prayer.sync.service.spec.ts:224:      (prismaService as any).prayerLocation.upsert.mockResolvedValue({});
+src/modules/prayer/tests/prayer.sync.service.spec.ts:251:      (prismaService as any).prayerTimes.create.mockResolvedValue({});
+src/modules/prayer/tests/prayer.sync.service.spec.ts:271:      (prismaService as any).prayerCalculationMethod.findUnique.mockResolvedValue(mockMethod);
+src/modules/prayer/tests/prayer.sync.service.spec.ts:272:      (prismaService as any).prayerLocation.upsert.mockResolvedValue({});
+src/modules/prayer/tests/prayer.sync.service.spec.ts:301:      (prismaService as any).prayerTimes.create.mockResolvedValue({});
+src/modules/prayer/prayer.controller.spec.ts:3:import { PrayerController } from "./prayer.controller";
+src/modules/prayer/prayer.controller.spec.ts:4:import { PrayerService } from "./prayer.service";
+src/modules/prayer/prayer.controller.spec.ts:39:    it("should return daily prayer times", async () => {
+src/modules/prayer/prayer.controller.spec.ts:90:    it("should return monthly prayer times", async () => {
+src/modules/prayer/prayer.module.ts:2:import { PrayerController } from "./prayer.controller";
+src/modules/prayer/prayer.module.ts:3:import { PrayerService } from "./prayer.service";
+src/modules/prayer/prayer.module.ts:4:import { PrayerSyncService } from "./prayer.sync.service";
+src/modules/prayer/prayer.module.ts:5:import { PrayerPrerequisitesService } from "./prayer-prerequisites.service";
+src/modules/prayer/prayer.module.ts:6:import { PrayerMapper } from "./prayer.mapper";
+src/modules/prayer/prayer.controller.ts:3:import { PrayerService } from "./prayer.service";
+src/modules/prayer/prayer.controller.ts:17:@Controller({ path: "prayer", version: "1" })
+src/modules/prayer/prayer.controller.ts:19:  constructor(private readonly prayerService: PrayerService) {}
+src/modules/prayer/prayer.controller.ts:23:    summary: "List prayer calculation methods",
+src/modules/prayer/prayer.controller.ts:29:      (await this.prayerService.getCalculationMethods()) as ServiceResponse;
+src/modules/prayer/prayer.controller.ts:54:    const result = (await this.prayerService.getCalculationMethod(
+src/modules/prayer/prayer.controller.ts:74:    const result = (await this.prayerService.getLocations()) as ServiceResponse;
+src/modules/prayer/prayer.controller.ts:93:    const result = (await this.prayerService.getLocation(
+src/modules/prayer/prayer.controller.ts:124:    const savedLocation = await this.prayerService.saveLocation(location);
+src/modules/prayer/prayer.controller.ts:136:    summary: "Get daily prayer times by coordinates",
+src/modules/prayer/prayer.controller.ts:205:    const result = (await this.prayerService.getDailyPrayerTimes(
+src/modules/prayer/prayer.controller.ts:230:    summary: "Get daily prayer times by city",
+src/modules/prayer/prayer.controller.ts:299:    const result = (await this.prayerService.getPrayerTimesByCity(
+src/modules/prayer/prayer.controller.ts:324:    summary: "Get monthly prayer calendar by coordinates",
+src/modules/prayer/prayer.controller.ts:415:    const result = (await this.prayerService.getPrayerCalendar(
+src/modules/prayer/prayer.controller.ts:441:    summary: "Get monthly prayer calendar",
+src/modules/prayer/prayer.controller.ts:443:      "Upstream-compatible with aladhan.com/v1/calendar/{year}/{month}. Example: /prayer/times/loc_23.8103_90.4125/monthly/2025/9?method=2&school=1&lat=23.8103&lng=90.4125&latitudeAdjustmentMethod=1&tune=1,2,3,4,5,6,7&timezonestring=Asia/Dhaka",
+src/modules/prayer/prayer.controller.ts:513:    const result = (await this.prayerService.getMonthlyPrayerTimes(
+src/modules/prayer/prayer.controller.ts:557:    const qiblaDirection = await this.prayerService.calculateQiblaDirection(
+src/modules/admin/security/audit-logger.middleware.ts:135:    } else if (path.includes('/prayer')) {
+src/modules/admin/security/audit-logger.middleware.ts:136:      resource = 'prayer';
+src/modules/admin/admin.controller.ts:95:  @Post("sync/prayer")
+src/modules/admin/admin.controller.ts:107:      data: { module: "prayer" },
+src/modules/admin/admin.controller.ts:111:  @Post("sync/prayer/prewarm")
+src/modules/admin/admin.controller.ts:112:  @ApiOperation({ summary: "Prewarm prayer times for all locations (default 7 days)" })
+src/modules/admin/admin.controller.ts:123:  @Post("sync/prayer/times")
+src/modules/admin/admin.controller.ts:124:  @ApiOperation({ summary: "Sync prayer times for specific location and method" })
+src/modules/admin/admin.controller.ts:163:  @Post("sync/prayer/calendar")
+src/modules/admin/admin.controller.ts:164:  @ApiOperation({ summary: "Sync prayer times for a full month using calendar endpoint" })
+src/modules/admin/admin.controller.ts:206:  @Post("sync/prayer/hijri-calendar")
+src/modules/admin/admin.controller.ts:207:  @ApiOperation({ summary: "Sync prayer times for a full Hijri month using Hijri calendar endpoint" })
+src/modules/admin/admin.controller.ts:249:  @Get("prayer/convert/gregorian-to-hijri")
+src/modules/admin/admin.controller.ts:261:  @Get("prayer/convert/hijri-to-gregorian")
+src/modules/admin/admin.controller.ts:273:  @Get("prayer/current-time")
+src/modules/admin/admin.controller.ts:285:  @Get("prayer/asma-al-husna")
+src/modules/admin/admin.controller.ts:430:  @Get('prayer-filters/methods')
+src/modules/admin/admin.controller.ts:431:  @ApiOperation({ summary: 'Get prayer calculation methods for filtering' })
+src/modules/admin/admin.controller.ts:441:  @Get('prayer-filters/madhabs')
+src/modules/admin/admin.controller.ts:442:  @ApiOperation({ summary: 'Get prayer madhabs for filtering' })
+src/modules/admin/admin.module.ts:14:import { PrayerModule } from "../prayer/prayer.module";
+src/modules/admin/admin.service.ts:6:import { PrayerSyncService } from "../prayer/prayer.sync.service";
+src/modules/admin/admin.service.ts:20:  prayer: {
+src/modules/admin/admin.service.ts:57:    private readonly prayerSync: PrayerSyncService,
+src/modules/admin/admin.service.ts:71:        prayerStats,
+src/modules/admin/admin.service.ts:87:        prayer: prayerStats,
+src/modules/admin/admin.service.ts:132:          recordCount: stats.prayer.locations,
+src/modules/admin/admin.service.ts:133:          lastSync: stats.prayer.lastSync,
+src/modules/admin/admin.service.ts:134:          syncStatus: this.getSyncStatus(stats.prayer.lastSync),
+src/modules/admin/admin.service.ts:137:            locations: stats.prayer.locations,
+src/modules/admin/admin.service.ts:138:            methods: stats.prayer.methods,
+src/modules/admin/admin.service.ts:214:      this.prisma.prayerLocation.count(),
+src/modules/admin/admin.service.ts:215:      this.prisma.prayerCalculationMethod.count(),
+src/modules/admin/admin.service.ts:218:          jobName: { in: ["prayer-prewarm", "prayer-times"] },
+src/modules/admin/admin.service.ts:364:        type: 'prayer' as const,
+src/modules/admin/admin.service.ts:367:        priority: 2, // Medium priority for prayer sync
+src/modules/admin/admin.service.ts:379:          module: "prayer",
+src/modules/admin/admin.service.ts:394:      // Create job control entry for prayer prewarm
+src/modules/admin/admin.service.ts:395:      const jobId = `prayer-prewarm-${Date.now()}`;
+src/modules/admin/admin.service.ts:398:        'prayer',
+src/modules/admin/admin.service.ts:405:      await this.jobControlService.updateJobProgress(jobId, 10, `Starting prayer prewarm for ${days} days...`);
+src/modules/admin/admin.service.ts:408:      const res = await this.prayerSync.prewarmAllLocations(days);
+src/modules/admin/admin.service.ts:414:          'prayer',
+src/modules/admin/admin.service.ts:435:          'prayer',
+src/modules/admin/admin.service.ts:453:      this.logger.error('Failed to run prayer prewarm', error.stack);
+src/modules/admin/admin.service.ts:457:        const jobId = `prayer-prewarm-${Date.now()}`;
+src/modules/admin/admin.service.ts:460:          'prayer',
+src/modules/admin/admin.service.ts:495:      const method = await this.prisma.prayerCalculationMethod.findFirst({
+src/modules/admin/admin.service.ts:516:      const result = await this.prayerSync.syncPrayerTimesForMethod(
+src/modules/admin/admin.service.ts:536:      this.logger.error("Failed to sync prayer times for location", error.stack);
+src/modules/admin/admin.service.ts:558:      const method = await this.prisma.prayerCalculationMethod.findFirst({
+src/modules/admin/admin.service.ts:572:      const result = await this.prayerSync.syncPrayerTimesCalendar(
+src/modules/admin/admin.service.ts:593:      this.logger.error("Failed to sync prayer times calendar", error.stack);
+src/modules/admin/admin.service.ts:615:      const method = await this.prisma.prayerCalculationMethod.findFirst({
+src/modules/admin/admin.service.ts:629:      const result = await this.prayerSync.syncPrayerTimesHijriCalendar(
+src/modules/admin/admin.service.ts:650:      this.logger.error("Failed to sync prayer times Hijri calendar", error.stack);
+src/modules/admin/admin.service.ts:660:      return await this.prayerSync.convertGregorianToHijri(gregorianDate);
+src/modules/admin/admin.service.ts:669:      return await this.prayerSync.convertHijriToGregorian(hijriDate);
+src/modules/admin/admin.service.ts:678:      return await this.prayerSync.getCurrentTime(timezone);
+src/modules/admin/admin.service.ts:687:      return await this.prayerSync.getAsmaAlHusna();
+src/modules/admin/admin.service.ts:874:        case 'prayer':
+src/modules/admin/admin.service.ts:875:        case 'prayer-times':
+src/modules/admin/admin.service.ts:925:        "prayer:",
+src/modules/admin/admin.service.ts:951:    const methods = await this.prisma.prayerCalculationMethod.findMany({
+src/modules/admin/content-management/content-management.service.ts:425:      case 'prayer':
+src/modules/admin/content-management/content-management.service.ts:427:      case 'prayer-times':
+src/modules/admin/content-management/content-management.service.ts:444:      case 'prayer':
+src/modules/admin/content-management/content-management.service.ts:461:      case 'prayer':
+src/modules/admin/content-management/content-management.service.ts:478:      case 'prayer':
+src/modules/admin/content-management/content-management.service.ts:495:      case 'prayer':
+src/modules/admin/content-management/content-management.service.ts:521:      (this.prisma as any).prayerLocation.findMany({
+src/modules/admin/content-management/content-management.service.ts:527:      (this.prisma as any).prayerLocation.count({ where }),
+src/modules/admin/content-management/content-management.service.ts:534:    const item = await (this.prisma as any).prayerLocation.findUnique({ where: { id } });
+src/modules/admin/content-management/content-management.service.ts:541:      const item = await (this.prisma as any).prayerLocation.create({
+src/modules/admin/content-management/content-management.service.ts:553:      this.logger.log(`Created prayer location: ${item.city || item.locKey}`);
+src/modules/admin/content-management/content-management.service.ts:556:      this.logger.error(`Failed to create prayer location: ${error.message}`);
+src/modules/admin/content-management/content-management.service.ts:557:      throw new BadRequestException('Failed to create prayer location');
+src/modules/admin/content-management/content-management.service.ts:563:      const item = await (this.prisma as any).prayerLocation.update({
+src/modules/admin/content-management/content-management.service.ts:567:      this.logger.log(`Updated prayer location ID ${id}`);
+src/modules/admin/content-management/content-management.service.ts:570:      this.logger.error(`Failed to update prayer location: ${error.message}`);
+src/modules/admin/content-management/content-management.service.ts:571:      throw new BadRequestException('Failed to update prayer location');
+src/modules/admin/content-management/content-management.service.ts:577:      await (this.prisma as any).prayerLocation.delete({ where: { id } });
+src/modules/admin/content-management/content-management.service.ts:578:      this.logger.log(`Deleted prayer location ID ${id}`);
+src/modules/admin/content-management/content-management.service.ts:580:      this.logger.error(`Failed to delete prayer location: ${error.message}`);
+src/modules/admin/content-management/content-management.service.ts:581:      throw new BadRequestException('Failed to delete prayer location');
+src/modules/admin/content-management/content-management.service.ts:598:    // Build where clause for prayer times
+src/modules/admin/content-management/content-management.service.ts:628:    // Get prayer times with location data and accurate total
+src/modules/admin/content-management/content-management.service.ts:629:    const [prayerTimes, total] = await Promise.all([
+src/modules/admin/content-management/content-management.service.ts:630:      this.prisma.prayerTimes.findMany({
+src/modules/admin/content-management/content-management.service.ts:642:      this.prisma.prayerTimes.count({
+src/modules/admin/content-management/content-management.service.ts:648:    const data: ContentItem[] = prayerTimes.map(pt => ({
+src/modules/admin/content-management/content-management.service.ts:681:  // Get prayer calculation methods for filtering
+src/modules/admin/content-management/content-management.service.ts:683:    const methods = await this.prisma.prayerCalculationMethod.findMany({
+src/modules/admin/content-management/content-management.controller.ts:40:  @ApiQuery({ name: 'date', required: false, type: 'string', description: 'Date filter for prayer times (ISO date string)' })
+src/modules/admin/content-management/content-management.controller.ts:41:  @ApiQuery({ name: 'method', required: false, type: 'string', description: 'Method ID or code for prayer times' })
+src/modules/admin/content-management/content-management.controller.ts:42:  @ApiQuery({ name: 'madhab', required: false, type: 'string', enum: ['shafi', 'hanafi'], description: 'Madhab for prayer times' })
+src/modules/admin/content-management/content-management.controller.ts:64:        // Add prayer times specific filters
+src/modules/admin/user-management/user-management.service.ts:353:        'read:prayer',
+src/modules/admin/user-management/user-management.service.ts:361:        'read:prayer',
+src/modules/admin/user-management/user-management.service.ts:367:        'update:prayer',
+src/modules/admin/user-management/user-management.service.ts:372:        'sync:prayer',
+src/modules/admin/user-management/user-management.service.ts:379:        'read:prayer',
+src/modules/admin/user-management/user-management.service.ts:386:        'update:prayer',
+src/modules/admin/user-management/user-management.service.ts:393:        'sync:prayer',
+src/modules/common/scheduler.service.ts:6:import { PrayerSyncService } from "../prayer/prayer.sync.service";
+src/modules/common/scheduler.service.ts:19:    private readonly prayerSync: PrayerSyncService,
+src/modules/common/scheduler.service.ts:61:    name: "prayer-prewarm",
+src/modules/common/scheduler.service.ts:68:      await this.logSyncJob("prayer-prewarm", "prayer-times", "started");
+src/modules/common/scheduler.service.ts:70:      // Queue the prayer sync job instead of running synchronously
+src/modules/common/scheduler.service.ts:72:        type: 'prayer' as const,
+src/modules/common/scheduler.service.ts:80:      await this.logSyncJob("prayer-prewarm", "prayer-times", "started");
+src/modules/common/scheduler.service.ts:85:        "prayer-prewarm",
+src/modules/common/scheduler.service.ts:86:        "prayer-times",
+src/modules/common/scheduler.module.ts:6:import { PrayerModule } from "../prayer/prayer.module";

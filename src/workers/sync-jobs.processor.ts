@@ -1,13 +1,17 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Job } from 'bullmq';
 import { PrismaService } from '../database/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { SunnahApiService } from '../modules/hadith/sunnah-api.service';
 import { TranslationService } from '../modules/hadith/translation.service';
 import { QuranSyncService } from '../modules/quran/quran.sync.service';
 import { PrayerSyncService } from '../modules/prayer/prayer.sync.service';
+import { PrayerPrerequisitesService } from '../modules/prayer/prayer-prerequisites.service';
 import { AudioSyncService } from '../modules/audio/audio.sync.service';
 import { GoldPriceScheduler } from '../modules/finance/goldprice.scheduler';
+import { JobControlService } from '../modules/admin/job-control/job-control.service';
 import { SyncJob } from './worker.service';
 
 @Processor('sync-queue')
@@ -16,12 +20,16 @@ export class SyncJobsProcessor extends WorkerHost {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly redisService: RedisService,
+    private readonly configService: ConfigService,
     private readonly sunnahApi: SunnahApiService,
     private readonly translationService: TranslationService,
     private readonly quranSyncService: QuranSyncService,
     private readonly prayerSyncService: PrayerSyncService,
+    private readonly prayerPrerequisitesService: PrayerPrerequisitesService,
     private readonly audioSyncService: AudioSyncService,
     private readonly goldPriceScheduler: GoldPriceScheduler,
+    private readonly jobControlService: JobControlService,
   ) {
     super();
   }
@@ -31,25 +39,110 @@ export class SyncJobsProcessor extends WorkerHost {
     
     this.logger.log(`Processing ${type}:${action} job (ID: ${job.id})`);
 
+    // Create job control entry
+    const jobId = job.id?.toString() || `unknown-${Date.now()}`;
+    const jobName = this.getJobName(type, action);
+    
     try {
+      // Check for cancellation before starting
+      if (await this.isJobCancelled(jobId)) {
+        this.logger.log(`Job ${jobId} was cancelled before processing`);
+        throw new Error('Job cancelled by user');
+      }
+
+      // Create job control entry
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        type,
+        jobName,
+        'running',
+        { startedBy: 'bullmq', timestamp: new Date().toISOString() }
+      );
+
+      let result: any;
       switch (type) {
         case 'hadith':
-          return await this.processHadithJob(job);
+          result = await this.processHadithJob(job);
+          break;
         case 'quran':
-          return await this.processQuranJob(job);
+          result = await this.processQuranJob(job);
+          break;
         case 'prayer':
-          return await this.processPrayerJob(job);
+          result = await this.processPrayerJob(job);
+          break;
         case 'audio':
-          return await this.processAudioJob(job);
+          result = await this.processAudioJob(job);
+          break;
         case 'zakat':
-          return await this.processZakatJob(job);
+          result = await this.processZakatJob(job);
+          break;
+        case 'finance':
+          result = await this.processFinanceJob(job);
+          break;
         default:
           throw new Error(`Unknown job type: ${type}`);
       }
+
+      // Mark job as completed
+      await this.jobControlService.createOrUpdateJobControl(
+        jobId,
+        type,
+        jobName,
+        'completed',
+        { 
+          completedAt: new Date().toISOString(),
+          result
+        }
+      );
+
+      return result;
     } catch (error) {
-      this.logger.error(`Job ${job.id} failed:`, error);
-      throw error;
+      // Handle pause vs cancellation differently
+      if (error.message === 'Job paused by user') {
+        // Mark job as paused
+        await this.jobControlService.createOrUpdateJobControl(
+          jobId,
+          type,
+          jobName,
+          'paused',
+          { 
+            error: error.message,
+            pausedAt: new Date().toISOString()
+          }
+        );
+        this.logger.log(`Job ${job.id} paused: ${type}:${action}`);
+        throw error;
+      } else {
+        this.logger.error(`Job ${job.id} failed:`, error);
+        
+        // Mark job as failed
+        await this.jobControlService.createOrUpdateJobControl(
+          jobId,
+          type,
+          jobName,
+          'failed',
+          { 
+            error: error.message,
+            failedAt: new Date().toISOString()
+          }
+        );
+        
+        throw error;
+      }
     }
+  }
+
+  private getJobName(type: string, action: string): string {
+    const typeNames = {
+      'quran': 'Quran Data Sync',
+      'prayer': 'Prayer Times Sync',
+      'hadith': 'Hadith Data Sync',
+      'audio': 'Audio Data Sync',
+      'zakat': 'Zakat Data Sync',
+      'finance': 'Gold Price Update',
+    };
+    
+    return typeNames[type] || `${type} ${action}`;
   }
 
   private async processHadithJob(job: Job<SyncJob>): Promise<any> {
@@ -434,8 +527,21 @@ export class SyncJobsProcessor extends WorkerHost {
     
     this.logger.log('Starting Quran sync job processing');
     
+    // Check if sync is enabled
+    const isSyncEnabled = this.configService.get("SYNC_ENABLED", "true") === "true";
+    if (!isSyncEnabled) {
+      this.logger.log("Quran sync is disabled, skipping job processing");
+      return { success: true, message: "Quran sync is disabled", skipped: true };
+    }
+    
     try {
       await job.updateProgress(10);
+      
+      // Check for cancellation before chapters sync
+      if (await this.isJobCancelled(job.id?.toString() || '')) {
+        this.logger.log(`Job ${job.id} was cancelled before chapters sync`);
+        throw new Error('Job cancelled by user');
+      }
       
       // Sync chapters
       const chaptersResult = await this.quranSyncService.syncChapters({ force: data?.force || false });
@@ -443,17 +549,35 @@ export class SyncJobsProcessor extends WorkerHost {
       
       await job.updateProgress(30);
       
+      // Check for cancellation before verses sync
+      if (await this.isJobCancelled(job.id?.toString() || '')) {
+        this.logger.log(`Job ${job.id} was cancelled before verses sync`);
+        throw new Error('Job cancelled by user');
+      }
+      
       // Sync verses
       const versesResult = await this.quranSyncService.syncVerses({ force: data?.force || false });
       this.logger.log(`Quran verses sync result: ${JSON.stringify(versesResult)}`);
       
       await job.updateProgress(60);
       
+      // Check for cancellation before translations sync
+      if (await this.isJobCancelled(job.id?.toString() || '')) {
+        this.logger.log(`Job ${job.id} was cancelled before translations sync`);
+        throw new Error('Job cancelled by user');
+      }
+      
       // Sync translation resources
       const translationsResult = await this.quranSyncService.syncTranslationResources({ force: data?.force || false });
       this.logger.log(`Quran translations sync result: ${JSON.stringify(translationsResult)}`);
       
       await job.updateProgress(80);
+      
+      // Check for cancellation before verse translations sync
+      if (await this.isJobCancelled(job.id?.toString() || '')) {
+        this.logger.log(`Job ${job.id} was cancelled before verse translations sync`);
+        throw new Error('Job cancelled by user');
+      }
       
       // Sync verse translations
       const verseTranslationsResult = await this.quranSyncService.syncVerseTranslations({ force: data?.force || false });
@@ -479,8 +603,16 @@ export class SyncJobsProcessor extends WorkerHost {
 
   private async processPrayerJob(job: Job<SyncJob>): Promise<any> {
     const { action, data } = job.data;
+    const jobId = job.id?.toString() || `unknown-${Date.now()}`;
     
     this.logger.log(`Starting Prayer sync job processing with action: ${action}`);
+    
+    // Check if sync is enabled
+    const isSyncEnabled = this.configService.get("SYNC_ENABLED", "true") === "true";
+    if (!isSyncEnabled) {
+      this.logger.log("Prayer sync is disabled, skipping job processing");
+      return { success: true, message: "Prayer sync is disabled", skipped: true };
+    }
     
     try {
       // Handle prewarm action
@@ -490,7 +622,7 @@ export class SyncJobsProcessor extends WorkerHost {
         const days = data?.days || 7;
         this.logger.log(`Starting prayer prewarm for ${days} days`);
         
-        const prewarmResult = await this.prayerSyncService.prewarmAllLocations(days);
+        const prewarmResult = await this.prayerSyncService.prewarmAllLocations(days, jobId, () => this.isJobCancelled(jobId));
         this.logger.log(`Prayer prewarm result: ${JSON.stringify(prewarmResult)}`);
         
         await job.updateProgress(100);
@@ -498,51 +630,196 @@ export class SyncJobsProcessor extends WorkerHost {
       }
       
       // Default sync action
-      await job.updateProgress(10);
+      await job.updateProgress(5);
       
-      // Sync calculation methods
+      // Check and fix prerequisites first
+      this.logger.log('Checking prayer sync prerequisites...');
+      const prerequisiteResult = await this.prayerPrerequisitesService.validateAndFixPrerequisites();
+      
+      if (!prerequisiteResult.success) {
+        throw new Error(`Prayer sync prerequisites failed: ${prerequisiteResult.message}`);
+      }
+      
+      if (prerequisiteResult.wasFixed) {
+        this.logger.log(`Prayer prerequisites were auto-fixed: ${prerequisiteResult.message}`);
+      } else {
+        this.logger.log(`Prayer prerequisites already met: ${prerequisiteResult.message}`);
+      }
+      
+      await job.updateProgress(15);
+      
+      // Sync calculation methods (if not already done by prerequisites)
       const methodsResult = await this.prayerSyncService.syncCalculationMethods({ force: data?.force || false });
       this.logger.log(`Prayer methods sync result: ${JSON.stringify(methodsResult)}`);
       
       await job.updateProgress(30);
       
-      // Sync prayer times for major cities
-      const majorCities = [
+      // First, ensure we have prayer locations by syncing comprehensive city list
+      this.logger.log('Ensuring prayer locations exist by syncing comprehensive city list...');
+      
+      const comprehensiveCities = [
+        // Middle East
         { name: "Mecca", lat: 21.4225, lng: 39.8262 },
         { name: "Medina", lat: 24.5247, lng: 39.5692 },
-        { name: "Istanbul", lat: 41.0082, lng: 28.9784 },
+        { name: "Riyadh", lat: 24.7136, lng: 46.6753 },
+        { name: "Jeddah", lat: 21.4858, lng: 39.1925 },
         { name: "Cairo", lat: 30.0444, lng: 31.2357 },
-        { name: "Jakarta", lat: -6.2088, lng: 106.8456 },
-        { name: "Lahore", lat: 31.5204, lng: 74.3587 },
-        { name: "Tehran", lat: 35.6892, lng: 51.389 },
+        { name: "Alexandria", lat: 31.2001, lng: 29.9187 },
+        { name: "Istanbul", lat: 41.0082, lng: 28.9784 },
+        { name: "Ankara", lat: 39.9334, lng: 32.8597 },
+        { name: "Tehran", lat: 35.6892, lng: 51.3890 },
+        { name: "Isfahan", lat: 32.6546, lng: 51.6680 },
+        { name: "Baghdad", lat: 33.3152, lng: 44.3661 },
+        { name: "Damascus", lat: 33.5138, lng: 36.2765 },
+        { name: "Amman", lat: 31.9454, lng: 35.9284 },
+        { name: "Kuwait City", lat: 29.3759, lng: 47.9774 },
+        { name: "Doha", lat: 25.2854, lng: 51.5310 },
         { name: "Dubai", lat: 25.2048, lng: 55.2708 },
-        { name: "Kuala Lumpur", lat: 3.139, lng: 101.6869 },
-        { name: "London", lat: 51.5074, lng: -0.1278 },
-        { name: "New York", lat: 40.7128, lng: -74.006 },
+        { name: "Abu Dhabi", lat: 24.4539, lng: 54.3773 },
+        { name: "Muscat", lat: 23.5880, lng: 58.3829 },
+        { name: "Manama", lat: 26.0667, lng: 50.5577 },
+        
+        // South & Southeast Asia
+        { name: "Jakarta", lat: -6.2088, lng: 106.8456 },
+        { name: "Surabaya", lat: -7.2504, lng: 112.7688 },
+        { name: "Bandung", lat: -6.9175, lng: 107.6191 },
+        { name: "Kuala Lumpur", lat: 3.1390, lng: 101.6869 },
+        { name: "Karachi", lat: 24.8607, lng: 67.0011 },
+        { name: "Lahore", lat: 31.5204, lng: 74.3587 },
+        { name: "Islamabad", lat: 33.6844, lng: 73.0479 },
+        { name: "Dhaka", lat: 23.8103, lng: 90.4125 },
+        { name: "Chittagong", lat: 22.3569, lng: 91.7832 },
+        { name: "Delhi", lat: 28.6139, lng: 77.2090 },
+        { name: "Mumbai", lat: 19.0760, lng: 72.8777 },
+        { name: "Hyderabad", lat: 17.3850, lng: 78.4867 },
+        { name: "Kolkata", lat: 22.5726, lng: 88.3639 },
+        
+        // Africa
+        { name: "Casablanca", lat: 33.5731, lng: -7.5898 },
+        { name: "Rabat", lat: 34.0209, lng: -6.8416 },
+        { name: "Algiers", lat: 36.7538, lng: 3.0588 },
+        { name: "Tunis", lat: 36.8065, lng: 10.1815 },
+        { name: "Khartoum", lat: 15.5007, lng: 32.5599 },
+        { name: "Addis Ababa", lat: 9.1450, lng: 38.7667 },
+        { name: "Lagos", lat: 6.5244, lng: 3.3792 },
+        { name: "Kano", lat: 12.0022, lng: 8.5919 },
+        { name: "Dakar", lat: 14.6928, lng: -17.4467 },
+        
+        // North America
+        { name: "New York", lat: 40.7128, lng: -74.0060 },
+        { name: "Los Angeles", lat: 34.0522, lng: -118.2437 },
+        { name: "Chicago", lat: 41.8781, lng: -87.6298 },
+        { name: "Detroit", lat: 42.3314, lng: -83.0458 },
+        { name: "Houston", lat: 29.7604, lng: -95.3698 },
         { name: "Toronto", lat: 43.6532, lng: -79.3832 },
+        { name: "Montreal", lat: 45.5017, lng: -73.5673 },
+        
+        // Europe
+        { name: "London", lat: 51.5074, lng: -0.1278 },
+        { name: "Birmingham", lat: 52.4862, lng: -1.8904 },
+        { name: "Paris", lat: 48.8566, lng: 2.3522 },
+        { name: "Marseille", lat: 43.2965, lng: 5.3698 },
+        { name: "Berlin", lat: 52.5200, lng: 13.4050 },
+        { name: "Amsterdam", lat: 52.3676, lng: 4.9041 },
+        { name: "Brussels", lat: 50.8503, lng: 4.3517 },
+        { name: "Stockholm", lat: 59.3293, lng: 18.0686 },
+        { name: "Oslo", lat: 59.9139, lng: 10.7522 },
+        
+        // Central Asia & Others
+        { name: "Tashkent", lat: 41.2995, lng: 69.2401 },
+        { name: "Almaty", lat: 43.2220, lng: 76.8512 },
+        { name: "Baku", lat: 40.4093, lng: 49.8671 },
+        { name: "Sarajevo", lat: 43.8563, lng: 18.4131 },
+        { name: "Skopje", lat: 41.9981, lng: 21.4254 },
         { name: "Sydney", lat: -33.8688, lng: 151.2093 },
+        { name: "Melbourne", lat: -37.8136, lng: 144.9631 },
       ];
       
-      const prayerTimesResults = [];
-      for (let i = 0; i < majorCities.length; i++) {
-        const city = majorCities[i];
-        const progress = 30 + (i / majorCities.length) * 60;
-        await job.updateProgress(progress);
-        
+      // Sync locations first (this creates the location records)
+      for (const city of comprehensiveCities) {
         try {
-          this.logger.log(`Syncing prayer times for ${city.name}...`);
-          const result = await this.prayerSyncService.syncPrayerTimes(
+          await this.prayerSyncService.syncPrayerTimes(
             city.lat,
             city.lng,
-            { force: data?.force || false }
+            { 
+              force: data?.force || false,
+              dateRange: {
+                start: new Date(),
+                end: new Date(Date.now() + 24 * 60 * 60 * 1000) // 1 day
+              }
+            }
           );
-          prayerTimesResults.push({ city: city.name, result });
-          
-          // Small delay between cities to be respectful
-          await new Promise(resolve => setTimeout(resolve, 500));
+          this.logger.log(`Location synced: ${city.name}`);
         } catch (error) {
-          this.logger.error(`Failed to sync prayer times for ${city.name}: ${error.message}`);
-          prayerTimesResults.push({ city: city.name, error: error.message });
+          this.logger.warn(`Failed to sync location ${city.name}: ${error.message}`);
+        }
+      }
+      
+      await job.updateProgress(50);
+      
+      // Now get all prayer locations (including the ones we just created)
+      const locations = await this.prisma.prayerLocation.findMany({
+        select: { id: true, city: true, country: true, lat: true, lng: true }
+      });
+      
+      this.logger.log(`Found ${locations.length} prayer locations to sync times for`);
+      
+      // Get all calculation methods
+      const methods = await this.prisma.prayerCalculationMethod.findMany({
+        select: { id: true, methodCode: true, methodName: true }
+      });
+      
+      // Get all madhabs (schools)
+      const madhabs = [0, 1]; // 0 = Shafi, 1 = Hanafi
+      
+      this.logger.log(`Found ${locations.length} locations, ${methods.length} methods, ${madhabs.length} madhabs`);
+      
+      const prayerTimesResults = [];
+      let totalCombinations = locations.length * methods.length * madhabs.length;
+      let processedCombinations = 0;
+      
+      for (const location of locations) {
+        for (const method of methods) {
+          for (const madhab of madhabs) {
+            // Check for cancellation before each prayer sync
+            if (await this.isJobCancelled(job.id?.toString() || '')) {
+              this.logger.log(`Job ${job.id} was cancelled during prayer sync`);
+              throw new Error('Job cancelled by user');
+            }
+
+            const progress = 50 + (processedCombinations / totalCombinations) * 40;
+            await job.updateProgress(progress);
+            
+            try {
+              this.logger.log(`Syncing prayer times for ${location.city || 'Unknown'} (${method.methodCode}, madhab: ${madhab})...`);
+              const result = await this.prayerSyncService.syncPrayerTimes(
+                location.lat,
+                location.lng,
+                { 
+                  force: data?.force || false
+                }
+              );
+              prayerTimesResults.push({ 
+                location: location.city || 'Unknown', 
+                method: method.methodCode,
+                madhab: madhab,
+                result 
+              });
+              
+              // Small delay between requests to be respectful to the API
+              await new Promise(resolve => setTimeout(resolve, 200));
+            } catch (error) {
+              this.logger.error(`Failed to sync prayer times for ${location.city || 'Unknown'} (${method.methodCode}, madhab: ${madhab}): ${error.message}`);
+              prayerTimesResults.push({ 
+                location: location.city || 'Unknown', 
+                method: method.methodCode,
+                madhab: madhab,
+                error: error.message 
+              });
+            }
+            
+            processedCombinations++;
+          }
         }
       }
       
@@ -564,17 +841,30 @@ export class SyncJobsProcessor extends WorkerHost {
 
   private async processAudioJob(job: Job<SyncJob>): Promise<any> {
     const { action, data } = job.data;
+    const jobId = job.id?.toString() || `unknown-${Date.now()}`;
     
     this.logger.log('Starting Audio sync job processing');
     
     try {
       await job.updateProgress(10);
       
+      // Check for cancellation before syncing reciters
+      if (await this.isJobCancelled(jobId)) {
+        this.logger.log('Audio sync job cancelled before reciters sync');
+        throw new Error('Job cancelled by user');
+      }
+      
       // Sync reciters
       const recitersResult = await this.audioSyncService.syncReciters();
       this.logger.log(`Audio reciters sync result: ${JSON.stringify(recitersResult)}`);
       
       await job.updateProgress(50);
+      
+      // Check for cancellation before syncing audio files
+      if (await this.isJobCancelled(jobId)) {
+        this.logger.log('Audio sync job cancelled before audio files sync');
+        throw new Error('Job cancelled by user');
+      }
       
       // Sync audio files
       const audioFilesResult = await this.audioSyncService.syncAllAudioFiles();
@@ -598,11 +888,18 @@ export class SyncJobsProcessor extends WorkerHost {
 
   private async processZakatJob(job: Job<SyncJob>): Promise<any> {
     const { action, data } = job.data;
+    const jobId = job.id?.toString() || `unknown-${Date.now()}`;
     
     this.logger.log('Starting Zakat sync job processing (Gold price update)');
     
     try {
       await job.updateProgress(10);
+      
+      // Check for cancellation before syncing gold prices
+      if (await this.isJobCancelled(jobId)) {
+        this.logger.log('Zakat sync job cancelled before gold price sync');
+        throw new Error('Job cancelled by user');
+      }
       
       // Sync gold prices (Zakat calculations depend on current gold prices)
       const goldPriceResult = await this.goldPriceScheduler.handleDailyScrape();
@@ -623,9 +920,67 @@ export class SyncJobsProcessor extends WorkerHost {
     }
   }
 
+  private async processFinanceJob(job: Job<SyncJob>): Promise<any> {
+    const { action, data } = job.data;
+    const jobId = job.id?.toString() || `unknown-${Date.now()}`;
+    
+    this.logger.log('Starting Finance sync job processing (Gold price update)');
+    
+    try {
+      await job.updateProgress(10);
+      
+      // Check for cancellation before syncing gold prices
+      if (await this.isJobCancelled(jobId)) {
+        this.logger.log('Finance sync job cancelled before gold price sync');
+        throw new Error('Job cancelled by user');
+      }
+      
+      // Sync gold prices
+      const goldPriceResult = await this.goldPriceScheduler.handleDailyScrape();
+      this.logger.log(`Gold price sync result: ${JSON.stringify(goldPriceResult)}`);
+      
+      await job.updateProgress(100);
+      
+      this.logger.log('Finance sync job completed successfully');
+      
+      return {
+        success: true,
+        goldPrices: goldPriceResult,
+        message: 'Finance sync (gold prices) completed successfully'
+      };
+    } catch (error) {
+      this.logger.error(`Finance sync job failed: ${error.message}`);
+      throw error;
+    }
+  }
+
   private async updateHadithCollection(job: Job<SyncJob>, data: any): Promise<any> {
     // TODO: Implement hadith collection update
     this.logger.log('Hadith collection update not implemented yet');
     return { success: true, message: 'Update not implemented' };
+  }
+
+  private async isJobCancelled(jobId: string): Promise<boolean> {
+    try {
+      const cancelKey = `sync:cancel:${jobId}`;
+      const pauseKey = `sync:pause:${jobId}`;
+      
+      const isCancelled = await this.redisService.get(cancelKey);
+      const isPaused = await this.redisService.get(pauseKey);
+      
+      // If paused, throw a different error that can be handled by resume
+      if (isPaused === 'true') {
+        throw new Error('Job paused by user');
+      }
+      
+      return isCancelled === 'true';
+    } catch (error) {
+      // If it's a pause error, re-throw it
+      if (error.message === 'Job paused by user') {
+        throw error;
+      }
+      this.logger.error('Error checking job cancellation:', error);
+      return false;
+    }
   }
 }

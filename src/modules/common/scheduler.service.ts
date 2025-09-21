@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
+import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../database/prisma.service";
 import { WorkerService } from "../../workers/worker.service";
 import { QuranSyncService } from "../quran/quran.sync.service";
@@ -15,6 +16,7 @@ export class SchedulerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly workerService: WorkerService,
+    private readonly configService: ConfigService,
     private readonly quranSync: QuranSyncService,
     private readonly prayerSync: PrayerSyncService,
     private readonly hadithSync: HadithSyncService,
@@ -28,6 +30,13 @@ export class SchedulerService {
     timeZone: "UTC",
   })
   async scheduledQuranSync(): Promise<void> {
+    // Check if sync is enabled
+    const isSyncEnabled = this.configService.get("SYNC_ENABLED", "true") === "true";
+    if (!isSyncEnabled) {
+      this.logger.log("Scheduled Quran sync is disabled");
+      return;
+    }
+
     this.logger.log("Starting scheduled Quran sync");
 
     try {
@@ -62,6 +71,13 @@ export class SchedulerService {
     timeZone: "UTC",
   })
   async scheduledPrayerPrewarm(): Promise<void> {
+    // Check if sync is enabled
+    const isSyncEnabled = this.configService.get("SYNC_ENABLED", "true") === "true";
+    if (!isSyncEnabled) {
+      this.logger.log("Scheduled Prayer pre-warming is disabled");
+      return;
+    }
+
     this.logger.log("Starting scheduled Prayer times pre-warming");
 
     try {
@@ -96,6 +112,13 @@ export class SchedulerService {
     timeZone: "UTC",
   })
   async scheduledHadithSync(): Promise<void> {
+    // Check if sync is enabled
+    const isSyncEnabled = this.configService.get("SYNC_ENABLED", "true") === "true";
+    if (!isSyncEnabled) {
+      this.logger.log("Scheduled Hadith sync is disabled");
+      return;
+    }
+
     this.logger.log("Starting scheduled Hadith sync");
 
     try {

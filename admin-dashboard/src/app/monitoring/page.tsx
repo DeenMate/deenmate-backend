@@ -7,6 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/layout/navbar';
 import { apiClient } from '@/lib/api';
 import { JobControlPanel } from '@/components/job-control/JobControlPanel';
+import { ApiMonitoringDashboard } from '@/components/monitoring/ApiMonitoringDashboard';
+import { RateLimitManagement } from '@/components/monitoring/RateLimitManagement';
+import { IpBlockingManagement } from '@/components/monitoring/IpBlockingManagement';
+import { ApiAnalytics } from '@/components/monitoring/ApiAnalytics';
+import { SystemHealthPanel } from '@/components/monitoring/SystemHealthPanel';
 
 interface SyncLog {
   id: string;
@@ -21,6 +26,28 @@ export default function MonitoringPage() {
   const [systemHealth, setSystemHealth] = useState<any>(null);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('system');
+
+  const tabs = [
+    { 
+      id: 'system', 
+      label: 'System Health', 
+      component: () => (
+        <SystemHealthPanel 
+          systemHealth={systemHealth}
+          syncLogs={syncLogs}
+          getStatusBadge={getStatusBadge}
+          formatUptime={formatUptime}
+          formatMemory={formatMemory}
+        />
+      )
+    },
+    { id: 'jobs', label: 'Job Control', component: JobControlPanel },
+    { id: 'api', label: 'API Monitoring', component: ApiMonitoringDashboard },
+    { id: 'rate-limits', label: 'Rate Limits', component: RateLimitManagement },
+    { id: 'ip-blocking', label: 'IP Blocking', component: IpBlockingManagement },
+    { id: 'analytics', label: 'Analytics', component: ApiAnalytics },
+  ];
 
   useEffect(() => {
     const fetchMonitoringData = async () => {
@@ -74,6 +101,7 @@ export default function MonitoringPage() {
     return `${Math.round(bytes / 1024 / 1024)}MB`;
   };
 
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -90,6 +118,8 @@ export default function MonitoringPage() {
     );
   }
 
+  const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -99,180 +129,31 @@ export default function MonitoringPage() {
           <p className="text-gray-600 mt-2">Real-time system health and performance metrics</p>
         </div>
 
-        {/* System Health Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">System Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2">
-                {systemHealth ? getStatusBadge(systemHealth.status) : <Badge variant="outline">Unknown</Badge>}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Uptime</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {systemHealth ? formatUptime(systemHealth.uptime) : 'N/A'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Database</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2">
-                {systemHealth ? getStatusBadge(systemHealth.checks?.database || 'unknown') : <Badge variant="outline">Unknown</Badge>}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Redis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2">
-                {systemHealth ? getStatusBadge(systemHealth.checks?.redis || 'unknown') : <Badge variant="outline">Unknown</Badge>}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Job Control Panel */}
-        <div className="mb-8">
-          <JobControlPanel />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* System Resources */}
-          <Card>
-            <CardHeader>
-              <CardTitle>System Resources</CardTitle>
-              <CardDescription>Memory and performance metrics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {systemHealth ? (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Memory Usage</span>
-                    <span className="font-semibold">
-                      {formatMemory(systemHealth.memoryUsage?.heapUsed || 0)} / {formatMemory(systemHealth.memoryUsage?.heapTotal || 0)}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
-                      style={{ 
-                        width: `${((systemHealth.memoryUsage?.heapUsed || 0) / (systemHealth.memoryUsage?.heapTotal || 1)) * 100}%` 
-                      }}
-                    ></div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-600">External Memory</p>
-                      <p className="font-semibold">{formatMemory(systemHealth.memoryUsage?.external || 0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">RSS Memory</p>
-                      <p className="font-semibold">{formatMemory(systemHealth.memoryUsage?.rss || 0)}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-gray-500">No system data available</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Sync Logs */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Sync Jobs</CardTitle>
-              <CardDescription>Latest synchronization activities</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {syncLogs.length > 0 ? (
-                  syncLogs.slice(0, 5).map((log) => (
-                    <div key={log.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{log.jobName}</p>
-                        <p className="text-xs text-gray-600">
-                          {new Date(log.startedAt).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {getStatusBadge(log.status)}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 text-center py-4">No sync logs available</p>
-                )}
-              </div>
-              
-              <div className="mt-4 pt-4 border-t">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => {/* TODO: Navigate to full logs */}}
+        {/* Tab Navigation */}
+        <div className="mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
                 >
-                  View All Logs
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
         </div>
 
-        {/* Quick Actions */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common administrative tasks</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              <Button 
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    const result = await apiClient.clearCache();
-                    alert(result.message);
-                  } catch (error) {
-                    alert('Failed to clear cache');
-                  }
-                }}
-              >
-                Clear Cache
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => {
-                  // Refresh monitoring data
-                  window.location.reload();
-                }}
-              >
-                Refresh Data
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => {/* TODO: Export logs */}}
-              >
-                Export Logs
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tab Content */}
+        <div className="mt-6">
+          {ActiveComponent && <ActiveComponent />}
+        </div>
       </div>
     </div>
   );

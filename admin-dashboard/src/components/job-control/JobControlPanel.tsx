@@ -12,7 +12,7 @@ interface JobControlPanelProps {
   refreshInterval?: number;
 }
 
-export function JobControlPanel({ refreshInterval = 30000 }: JobControlPanelProps) {
+export function JobControlPanel({ refreshInterval = 60000 }: JobControlPanelProps) {
   const [jobs, setJobs] = useState<JobStatus[]>([]);
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);

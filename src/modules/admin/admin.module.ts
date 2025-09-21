@@ -6,6 +6,7 @@ import { UserManagementModule } from "./user-management/user-management.module";
 import { SecurityModule } from "./security/security.module";
 import { ContentManagementModule } from "./content-management/content-management.module";
 import { JobControlModule } from "./job-control/job-control.module";
+import { ApiMonitoringModule } from "./api-monitoring/api-monitoring.module";
 import { DatabaseModule } from "../../database/database.module";
 import { RedisModule } from "../../redis/redis.module";
 import { WorkerModule } from "../../workers/worker.module";
@@ -26,6 +27,7 @@ import { FinanceModule } from "../finance/finance.module";
     SecurityModule,
     ContentManagementModule,
     JobControlModule,
+    ApiMonitoringModule,
     QuranModule,
     PrayerModule,
     HadithModule,
@@ -35,6 +37,6 @@ import { FinanceModule } from "../finance/finance.module";
   ],
   controllers: [AdminController],
   providers: [AdminService],
-  exports: [AdminService, AdminAuthModule, UserManagementModule, SecurityModule, ContentManagementModule, JobControlModule],
+  exports: [AdminService, AdminAuthModule, UserManagementModule, SecurityModule, ContentManagementModule, JobControlModule, ApiMonitoringModule],
 })
 export class AdminModule {}

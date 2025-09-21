@@ -40,7 +40,13 @@ export class JobControlService {
         throw new BadRequestException(`Job ${jobId} is not running and cannot be paused`);
       }
 
-      // Update job status
+      // Try to pause the BullMQ job (may not exist for old jobs)
+      const bullJobPaused = await this.workerService.pauseJob(jobId);
+      if (!bullJobPaused) {
+        this.logger.warn(`BullMQ job ${jobId} not found, updating database status only`);
+      }
+
+      // Update job status in database
       await this.prisma.syncJobControl.update({
         where: { jobId },
         data: {
@@ -88,7 +94,13 @@ export class JobControlService {
         throw new BadRequestException(`Job ${jobId} is not paused and cannot be resumed`);
       }
 
-      // Update job status
+      // Actually resume the BullMQ job
+      const bullJobResumed = await this.workerService.resumeJob(jobId);
+      if (!bullJobResumed) {
+        this.logger.warn(`BullMQ job ${jobId} not found, updating database status only`);
+      }
+
+      // Update job status in database
       await this.prisma.syncJobControl.update({
         where: { jobId },
         data: {
@@ -129,7 +141,13 @@ export class JobControlService {
         throw new BadRequestException(`Job ${jobId} is already ${job.status} and cannot be cancelled`);
       }
 
-      // Update job status
+      // Actually cancel the BullMQ job
+      const bullJobCancelled = await this.workerService.cancelJob(jobId);
+      if (!bullJobCancelled) {
+        this.logger.warn(`BullMQ job ${jobId} not found, updating database status only`);
+      }
+
+      // Update job status in database
       await this.prisma.syncJobControl.update({
         where: { jobId },
         data: {
@@ -170,10 +188,16 @@ export class JobControlService {
         throw new BadRequestException(`Job ${jobId} is running and cannot be deleted`);
       }
 
+      // Actually delete the BullMQ job
+      const bullJobDeleted = await this.workerService.deleteJob(jobId);
+      if (!bullJobDeleted) {
+        this.logger.warn(`BullMQ job ${jobId} not found, deleting database record only`);
+      }
+
       // Log the action BEFORE deleting the job
       await this.logJobAction(jobId, 'delete', userId);
 
-      // Delete the job
+      // Delete the job from database
       await this.prisma.syncJobControl.delete({
         where: { jobId },
       });

@@ -27,7 +27,7 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
   private connectedClients = new Map<string, Socket>();
 
   handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+    // Completely disable connection logging to prevent spam
     this.connectedClients.set(client.id, client);
     
     // Send initial connection confirmation
@@ -39,13 +39,16 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
   }
 
   handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id}`);
+    // Completely disable disconnection logging to prevent spam
     this.connectedClients.delete(client.id);
   }
 
   // Emit job status updates to all connected clients
   emitJobStatusUpdate(jobId: string, status: JobStatus): void {
-    this.logger.log(`Emitting job status update for ${jobId}: ${status.status}`);
+    // Only log significant status changes
+    if (status.status === 'completed' || status.status === 'failed') {
+      this.logger.log(`Job ${jobId} ${status.status}`);
+    }
     this.server.emit('job-status-update', {
       jobId,
       status,
@@ -55,7 +58,10 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
 
   // Emit job progress updates to all connected clients
   emitJobProgressUpdate(jobId: string, progress: JobProgress): void {
-    this.logger.log(`Emitting job progress update for ${jobId}: ${progress.progressPercentage}%`);
+    // Only log progress milestones (every 25%)
+    if (progress.progressPercentage % 25 === 0) {
+      this.logger.log(`Job ${jobId} progress: ${progress.progressPercentage}%`);
+    }
     this.server.emit('job-progress-update', {
       jobId,
       progress,
@@ -65,7 +71,7 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
 
   // Emit job control action results to all connected clients
   emitJobControlAction(jobId: string, action: string, result: JobControlResult): void {
-    this.logger.log(`Emitting job control action for ${jobId}: ${action}`);
+    this.logger.log(`Job ${jobId} ${action} action completed`);
     this.server.emit('job-control-action', {
       jobId,
       action,
@@ -76,7 +82,7 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
 
   // Emit queue status updates to all connected clients
   emitQueueStatusUpdate(queueStatus: any): void {
-    this.logger.log('Emitting queue status update');
+    // Only log queue status changes, not every update
     this.server.emit('queue-status-update', {
       queueStatus,
       timestamp: new Date().toISOString(),
@@ -85,7 +91,7 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
 
   // Emit system health updates to all connected clients
   emitSystemHealthUpdate(health: any): void {
-    this.logger.log('Emitting system health update');
+    // Only log health status changes, not every update
     this.server.emit('system-health-update', {
       health,
       timestamp: new Date().toISOString(),
@@ -98,7 +104,7 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
     @MessageBody() data: { jobId: string },
     @ConnectedSocket() client: Socket,
   ): void {
-    this.logger.log(`Client ${client.id} subscribed to job ${data.jobId}`);
+    // Reduced logging - only log in debug mode
     client.join(`job-${data.jobId}`);
     client.emit('subscribed', {
       jobId: data.jobId,
@@ -112,7 +118,7 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
     @MessageBody() data: { jobId: string },
     @ConnectedSocket() client: Socket,
   ): void {
-    this.logger.log(`Client ${client.id} unsubscribed from job ${data.jobId}`);
+    // Reduced logging - only log in debug mode
     client.leave(`job-${data.jobId}`);
     client.emit('unsubscribed', {
       jobId: data.jobId,
@@ -123,7 +129,7 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
   // Handle client subscription to all job updates
   @SubscribeMessage('subscribe-all-jobs')
   handleSubscribeAllJobs(@ConnectedSocket() client: Socket): void {
-    this.logger.log(`Client ${client.id} subscribed to all job updates`);
+    // Reduced logging - only log in debug mode
     client.join('all-jobs');
     client.emit('subscribed-all', {
       message: 'Subscribed to all job updates',
@@ -133,7 +139,7 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
   // Handle client unsubscription from all job updates
   @SubscribeMessage('unsubscribe-all-jobs')
   handleUnsubscribeAllJobs(@ConnectedSocket() client: Socket): void {
-    this.logger.log(`Client ${client.id} unsubscribed from all job updates`);
+    // Reduced logging - only log in debug mode
     client.leave('all-jobs');
     client.emit('unsubscribed-all', {
       message: 'Unsubscribed from all job updates',
@@ -142,7 +148,10 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
 
   // Emit job status update to specific job subscribers
   emitJobStatusUpdateToSubscribers(jobId: string, status: JobStatus): void {
-    this.logger.log(`Emitting job status update to subscribers for ${jobId}`);
+    // Reduced logging - only log significant status changes
+    if (status.status === 'completed' || status.status === 'failed') {
+      this.logger.log(`Job ${jobId} ${status.status} - notifying subscribers`);
+    }
     this.server.to(`job-${jobId}`).emit('job-status-update', {
       jobId,
       status,
@@ -152,7 +161,10 @@ export class JobControlGateway implements OnGatewayConnection, OnGatewayDisconne
 
   // Emit job progress update to specific job subscribers
   emitJobProgressUpdateToSubscribers(jobId: string, progress: JobProgress): void {
-    this.logger.log(`Emitting job progress update to subscribers for ${jobId}`);
+    // Reduced logging - only log progress milestones
+    if (progress.progressPercentage % 25 === 0) {
+      this.logger.log(`Job ${jobId} progress: ${progress.progressPercentage}% - notifying subscribers`);
+    }
     this.server.to(`job-${jobId}`).emit('job-progress-update', {
       jobId,
       progress,

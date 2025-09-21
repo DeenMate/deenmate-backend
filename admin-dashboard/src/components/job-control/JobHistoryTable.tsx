@@ -16,7 +16,7 @@ interface JobHistoryTableProps {
   initialLimit?: number;
 }
 
-export function JobHistoryTable({ refreshInterval = 30000, initialLimit = 20 }: JobHistoryTableProps) {
+export function JobHistoryTable({ refreshInterval = 60000, initialLimit = 20 }: JobHistoryTableProps) {
   const [jobs, setJobs] = useState<JobStatus[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<JobStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);

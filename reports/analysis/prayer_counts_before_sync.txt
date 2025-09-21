@@ -1,0 +1,15 @@
+ prayer_methods_count 
+----------------------
+                    2
+(1 row)
+
+ prayer_locations_count 
+------------------------
+                      2
+(1 row)
+
+ prayer_times_count 
+--------------------
+                  0
+(1 row)
+

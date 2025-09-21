@@ -9,13 +9,22 @@ Production backend for DeenMate — Islamic content APIs with unified monolithic
 1. **[PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md)** - Comprehensive project context, architecture, and development guidelines
 2. **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** - Project tracking, sprint management, module status, and development progress
 
-## 🎯 **Current Status: PRODUCTION READY** ✅
+## 🎯 **Current Status: CRITICAL ISSUES IDENTIFIED** 🔴
 
-**Last Updated**: September 20, 2025  
-**Status**: Production Ready - Complete Job Control System with Verified Operations
+**Last Updated**: September 21, 2025  
+**Status**: Critical Architecture Issues Identified - Sync System Requires Immediate Fixes
+
+### 🚨 **CRITICAL ISSUES REQUIRING IMMEDIATE ATTENTION**
+**See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for detailed analysis and fix plan**
+
+- 🔴 **Duplicate Job Processing**: Jobs processed by both dedicated and legacy processors
+- 🔴 **Inconsistent Job Routing**: Multiple conflicting job triggering mechanisms  
+- 🔴 **Incomplete Cancellation**: Cancellation not implemented in all processors
+- 🔴 **Missing Dependencies**: Processors missing required services for full functionality
+- 🔴 **Inconsistent SYNC_ENABLED Checks**: Not implemented consistently across processors
 
 ### ✅ **Major Completed Features:**
-- **Complete Sync System**: All sync modules (Audio, Gold Price, Prayer) now fully operational
+- **Sync System Architecture**: BullMQ queue system implemented with separate processors
 - **Audio Sync Fixed**: Resolved foreign key constraints and reciter ID mapping issues
 - **Gold Price Sync Fixed**: Corrected service method call from scheduler to service
 - **Prayer Sync Fixed**: Resolved timezone issues, date parsing, and API response structure
@@ -30,13 +39,13 @@ Production backend for DeenMate — Islamic content APIs with unified monolithic
 - **Security Headers**: Comprehensive security headers middleware (CSP, XSS protection, HSTS)
 - **Password Policy**: Strong password complexity requirements with validation
 - **Audio URL Validation**: Comprehensive URL validation with trusted domain checking
-- **Test Coverage**: 73% test success rate (32/44 tests passing, 6/8 test suites passing)
+- **Test Coverage**: 73% test success rate (32/44 tests passing, 6/8 test suites passing) - Date mocking issues identified
 - **Module Organization**: Clean separation with `src/modules/` structure  
 - **Database Integration**: PostgreSQL + Redis working perfectly with enhanced schema
 - **API Compatibility**: 100% backward compatible with existing endpoints
 - **Build System**: All TypeScript compilation errors resolved
 - **Application Startup**: Successfully running on http://localhost:3000
-- **Admin Dashboard**: Running on http://localhost:3001 with full sync capabilities, advanced filtering, and health monitoring
+- **Admin Dashboard**: Integrated and accessible at http://localhost:3000/admin with full sync capabilities, advanced filtering, and health monitoring
 - **Gold Price Parser**: Fixed and working with accurate Bajus website parsing
 - **Hadith Sync**: Local database sync working (bypassing external API issues)
 - **Cron Jobs**: All scheduled tasks operational with BullMQ queue system
@@ -116,10 +125,10 @@ Production backend for DeenMate — Islamic content APIs with unified monolithic
 - **Audio Files**: 12,744 audio files synced across all reciters
 - **Reciter Coverage**: 12 active reciters fully synced
 
-### ⚠️ **Current Test Status (September 18, 2025):**
+### ⚠️ **Current Test Status (September 21, 2025):**
 - **Test Suites**: 6/8 passing (75% success rate)
 - **Individual Tests**: 32/44 passing (73% success rate)
-- **Issues**: Some test failures in prayer sync service and admin controller tests
+- **Issues**: Test failures in prayer sync service and admin controller tests due to date mocking issues
 - **Status**: Core functionality working, test mocking needs fixes
 - **API Endpoints**: All audio endpoints functional and tested
 - **Verification**: Comprehensive testing across all chapters (1, 2, 3, 10, 25, 50, 75, 100, 110, 114)
@@ -202,7 +211,7 @@ npm run start:dev
 
 ### Access Points
 - **API Base**: `http://localhost:3000/api`
-- **Admin Dashboard**: `http://localhost:3001` (Next.js frontend)
+- **Admin Dashboard**: `http://localhost:3000/admin` (Integrated Next.js frontend)
 - **Swagger UI**: `http://localhost:3000/docs`
 - **OpenAPI JSON**: `http://localhost:3000/docs-json`
 - **Health Check**: `http://localhost:3000/api/v4/health`
@@ -408,7 +417,7 @@ npm run db:migrate         # Run migrations
 
 # Admin Dashboard (Next.js)
 cd admin-dashboard
-npm run dev                # Start admin dashboard (port 3001)
+npm run dev                # Start admin dashboard (integrated on port 3000)
 npm run build              # Build admin dashboard
 npm run lint               # Lint admin dashboard
 ```

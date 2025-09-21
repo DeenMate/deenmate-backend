@@ -1,0 +1,243 @@
+src/app.module.ts:13:import { SyncModule } from "./sync/sync.module";
+src/app.module.ts:62:    SyncModule,
+src/common/utils/hash.util.ts:45:export function generateSyncJobId(
+src/workers/worker.module.ts:3:import { SyncJobsProcessor } from './sync-jobs.processor';
+src/workers/worker.module.ts:24:  providers: [WorkerService, SyncJobsProcessor, JobControlService, JobControlGateway],
+src/workers/worker.service.ts:6:export interface SyncJob {
+src/workers/worker.service.ts:53:  async addSyncJob(job: SyncJob): Promise<Job> {
+src/workers/sync-jobs.processor.ts:7:import { QuranSyncService } from '../modules/quran/quran.sync.service';
+src/workers/sync-jobs.processor.ts:8:import { PrayerSyncService } from '../modules/prayer/prayer.sync.service';
+src/workers/sync-jobs.processor.ts:10:import { AudioSyncService } from '../modules/audio/audio.sync.service';
+src/workers/sync-jobs.processor.ts:13:import { SyncJob } from './worker.service';
+src/workers/sync-jobs.processor.ts:16:export class SyncJobsProcessor extends WorkerHost {
+src/workers/sync-jobs.processor.ts:17:  private readonly logger = new Logger(SyncJobsProcessor.name);
+src/workers/sync-jobs.processor.ts:23:    private readonly quranSyncService: QuranSyncService,
+src/workers/sync-jobs.processor.ts:24:    private readonly prayerSyncService: PrayerSyncService,
+src/workers/sync-jobs.processor.ts:26:    private readonly audioSyncService: AudioSyncService,
+src/workers/sync-jobs.processor.ts:33:  async process(job: Job<SyncJob>): Promise<any> {
+src/workers/sync-jobs.processor.ts:121:  private async processHadithJob(job: Job<SyncJob>): Promise<any> {
+src/workers/sync-jobs.processor.ts:138:  private async syncAllHadithCollections(job: Job<SyncJob>): Promise<any> {
+src/workers/sync-jobs.processor.ts:185:  private async syncHadithCollection(job: Job<SyncJob>, collectionName: string): Promise<any> {
+src/workers/sync-jobs.processor.ts:279:  private async syncHadithCollectionFromLocal(job: Job<SyncJob>, collectionName: string): Promise<any> {
+src/workers/sync-jobs.processor.ts:372:  private async syncHadithsInBatches(job: Job<SyncJob>, collectionId: number, collectionName: string): Promise<number> {
+src/workers/sync-jobs.processor.ts:498:  private async processQuranJob(job: Job<SyncJob>): Promise<any> {
+src/workers/sync-jobs.processor.ts:507:      const chaptersResult = await this.quranSyncService.syncChapters({ force: data?.force || false });
+src/workers/sync-jobs.processor.ts:513:      const versesResult = await this.quranSyncService.syncVerses({ force: data?.force || false });
+src/workers/sync-jobs.processor.ts:519:      const translationsResult = await this.quranSyncService.syncTranslationResources({ force: data?.force || false });
+src/workers/sync-jobs.processor.ts:525:      const verseTranslationsResult = await this.quranSyncService.syncVerseTranslations({ force: data?.force || false });
+src/workers/sync-jobs.processor.ts:546:  private async processPrayerJob(job: Job<SyncJob>): Promise<any> {
+src/workers/sync-jobs.processor.ts:559:        const prewarmResult = await this.prayerSyncService.prewarmAllLocations(days);
+src/workers/sync-jobs.processor.ts:586:      const methodsResult = await this.prayerSyncService.syncCalculationMethods({ force: data?.force || false });
+src/workers/sync-jobs.processor.ts:675:          await this.prayerSyncService.syncPrayerTimes(
+src/workers/sync-jobs.processor.ts:723:              const result = await this.prayerSyncService.syncPrayerTimes(
+src/workers/sync-jobs.processor.ts:770:  private async processAudioJob(job: Job<SyncJob>): Promise<any> {
+src/workers/sync-jobs.processor.ts:779:      const recitersResult = await this.audioSyncService.syncReciters();
+src/workers/sync-jobs.processor.ts:785:      const audioFilesResult = await this.audioSyncService.syncAllAudioFiles();
+src/workers/sync-jobs.processor.ts:804:  private async processZakatJob(job: Job<SyncJob>): Promise<any> {
+src/workers/sync-jobs.processor.ts:831:  private async processFinanceJob(job: Job<SyncJob>): Promise<any> {
+src/workers/sync-jobs.processor.ts:858:  private async updateHadithCollection(job: Job<SyncJob>, data: any): Promise<any> {
+src/sync/sync.cron.service.ts:4:import { QuranSyncService } from "../modules/quran/quran.sync.service";
+src/sync/sync.cron.service.ts:5:import { PrayerSyncService } from "../modules/prayer/prayer.sync.service";
+src/sync/sync.cron.service.ts:8:export class SyncCronService {
+src/sync/sync.cron.service.ts:9:  private readonly logger = new Logger(SyncCronService.name);
+src/sync/sync.cron.service.ts:13:    private readonly quranSyncService: QuranSyncService,
+src/sync/sync.cron.service.ts:14:    private readonly prayerSyncService: PrayerSyncService,
+src/sync/sync.cron.service.ts:32:      const chaptersResult = await this.quranSyncService.syncChapters();
+src/sync/sync.cron.service.ts:38:      const versesResult = await this.quranSyncService.syncVerses();
+src/sync/sync.cron.service.ts:45:        await this.quranSyncService.syncTranslationResources();
+src/sync/sync.cron.service.ts:68:        await this.prayerSyncService.syncCalculationMethods();
+src/sync/sync.cron.service.ts:143:        const result = await this.prayerSyncService.syncPrayerTimes(
+src/sync/sync.cron.service.ts:172:      const chaptersResult = await this.quranSyncService.syncChapters({
+src/sync/sync.cron.service.ts:175:      const versesResult = await this.quranSyncService.syncVerses({ force });
+src/sync/sync.cron.service.ts:177:        await this.quranSyncService.syncTranslationResources({ force });
+src/sync/sync.cron.service.ts:194:      const methodsResult = await this.prayerSyncService.syncCalculationMethods(
+src/sync/sync.cron.service.ts:208:          const result = await this.prayerSyncService.syncPrayerTimes(
+src/sync/sync.module.ts:10:import { SyncCronService } from "./sync.cron.service";
+src/sync/sync.module.ts:24:  providers: [SyncCronService],
+src/sync/sync.module.ts:26:  exports: [SyncCronService],
+src/sync/sync.module.ts:28:export class SyncModule {}
+src/sync/sync.controller.ts:12:import { SyncCronService } from "./sync.cron.service";
+src/sync/sync.controller.ts:13:import { QuranSyncService } from "../modules/quran/quran.sync.service";
+src/sync/sync.controller.ts:14:import { PrayerSyncService } from "../modules/prayer/prayer.sync.service";
+src/sync/sync.controller.ts:15:import { AudioSyncService } from "../modules/audio/audio.sync.service";
+src/sync/sync.controller.ts:24:    private readonly syncCronService: SyncCronService,
+src/sync/sync.controller.ts:25:    private readonly quranSyncService: QuranSyncService,
+src/sync/sync.controller.ts:26:    private readonly prayerSyncService: PrayerSyncService,
+src/sync/sync.controller.ts:27:    private readonly audioSyncService: AudioSyncService,
+src/sync/sync.controller.ts:42:        const chaptersResult = await this.quranSyncService.syncChapters({
+src/sync/sync.controller.ts:45:        const versesResult = await this.quranSyncService.syncVerses({
+src/sync/sync.controller.ts:49:          await this.quranSyncService.syncTranslationResources({
+src/sync/sync.controller.ts:92:          await this.prayerSyncService.syncCalculationMethods({ dryRun: true });
+src/sync/sync.controller.ts:95:        const prayerTimesResult = await this.prayerSyncService.syncPrayerTimes(
+src/sync/sync.controller.ts:157:        this.audioSyncService.syncAllAudioFiles(),
+src/sync/sync.controller.ts:214:      const result = await this.quranSyncService.syncChapters({
+src/sync/sync.controller.ts:243:      const result = await this.quranSyncService.syncVerses({
+src/sync/sync.controller.ts:272:      const result = await this.prayerSyncService.syncCalculationMethods({
+src/sync/sync.controller.ts:319:      const result = await this.prayerSyncService.syncPrayerTimes(
+src/sync/sync.controller.ts:342:      const result = await this.audioSyncService.syncReciters();
+src/sync/sync.controller.ts:368:        result = await this.audioSyncService.syncAudioFilesForChapter(
+src/sync/sync.controller.ts:373:        result = await this.audioSyncService.syncAllAudioFiles();
+src/sync/sync.controller.spec.ts:4:import { SyncCronService } from "./sync.cron.service";
+src/sync/sync.controller.spec.ts:5:import { QuranSyncService } from "../modules/quran/quran.sync.service";
+src/sync/sync.controller.spec.ts:6:import { PrayerSyncService } from "../modules/prayer/prayer.sync.service";
+src/sync/sync.controller.spec.ts:7:import { AudioSyncService } from "../modules/audio/audio.sync.service";
+src/sync/sync.controller.spec.ts:13:  let quranSyncService: QuranSyncService;
+src/sync/sync.controller.spec.ts:14:  let prayerSyncService: PrayerSyncService;
+src/sync/sync.controller.spec.ts:17:  const mockSyncCronService = {
+src/sync/sync.controller.spec.ts:23:  const mockQuranSyncService = {
+src/sync/sync.controller.spec.ts:29:  const mockPrayerSyncService = {
+src/sync/sync.controller.spec.ts:34:  const mockAudioSyncService = {
+src/sync/sync.controller.spec.ts:49:          provide: SyncCronService,
+src/sync/sync.controller.spec.ts:50:          useValue: mockSyncCronService,
+src/sync/sync.controller.spec.ts:53:          provide: QuranSyncService,
+src/sync/sync.controller.spec.ts:54:          useValue: mockQuranSyncService,
+src/sync/sync.controller.spec.ts:57:          provide: PrayerSyncService,
+src/sync/sync.controller.spec.ts:58:          useValue: mockPrayerSyncService,
+src/sync/sync.controller.spec.ts:61:          provide: AudioSyncService,
+src/sync/sync.controller.spec.ts:62:          useValue: mockAudioSyncService,
+src/sync/sync.controller.spec.ts:72:    module.get<SyncCronService>(SyncCronService);
+src/sync/sync.controller.spec.ts:73:    quranSyncService = module.get<QuranSyncService>(QuranSyncService);
+src/sync/sync.controller.spec.ts:74:    prayerSyncService = module.get<PrayerSyncService>(PrayerSyncService);
+src/sync/sync.controller.spec.ts:75:    module.get<AudioSyncService>(AudioSyncService);
+src/sync/sync.controller.spec.ts:91:      mockQuranSyncService.syncChapters.mockResolvedValue(mockResult.chapters);
+src/sync/sync.controller.spec.ts:92:      mockQuranSyncService.syncVerses.mockResolvedValue(mockResult.verses);
+src/sync/sync.controller.spec.ts:93:      mockQuranSyncService.syncTranslationResources.mockResolvedValue(
+src/sync/sync.controller.spec.ts:109:      expect(quranSyncService.syncChapters).toHaveBeenCalledWith({ dryRun: true });
+src/sync/sync.controller.spec.ts:110:      expect(quranSyncService.syncVerses).toHaveBeenCalledWith({ dryRun: true });
+src/sync/sync.controller.spec.ts:111:      expect(quranSyncService.syncTranslationResources).toHaveBeenCalledWith({ dryRun: true });
+src/sync/sync.controller.spec.ts:122:      mockPrayerSyncService.syncCalculationMethods.mockResolvedValue(
+src/sync/sync.controller.spec.ts:125:      mockPrayerSyncService.syncPrayerTimes.mockResolvedValue(mockResult.times);
+src/sync/sync.controller.spec.ts:139:      expect(prayerSyncService.syncCalculationMethods).toHaveBeenCalledWith({ dryRun: true });
+src/sync/sync.controller.spec.ts:140:      expect(prayerSyncService.syncPrayerTimes).toHaveBeenCalledWith(21.4225, 39.8262, { dryRun: true });
+src/sync/sync.controller.spec.ts:166:      mockQuranSyncService.syncChapters.mockResolvedValue({
+src/sync/sync.controller.spec.ts:170:      mockQuranSyncService.syncVerses.mockResolvedValue({
+src/sync/sync.controller.spec.ts:174:      mockQuranSyncService.syncTranslationResources.mockResolvedValue({
+src/sync/sync.controller.spec.ts:178:      mockPrayerSyncService.syncCalculationMethods.mockResolvedValue({
+src/sync/sync.controller.spec.ts:182:      mockPrayerSyncService.syncPrayerTimes.mockResolvedValue({
+src/sync/sync.controller.spec.ts:186:      mockAudioSyncService.syncReciters.mockResolvedValue({
+src/sync/sync.controller.spec.ts:190:      mockAudioSyncService.syncAudioFiles.mockResolvedValue({
+src/modules/prayer/prayer.sync.service.ts:6:import { generateHash, generateSyncJobId } from "../../common/common.module";
+src/modules/prayer/prayer.sync.service.ts:36:export class PrayerSyncService {
+src/modules/prayer/prayer.sync.service.ts:37:  private readonly logger = new Logger(PrayerSyncService.name);
+src/modules/prayer/prayer.sync.service.ts:222:    const jobId = generateSyncJobId("prayer-methods", "methods", new Date());
+src/modules/prayer/prayer.sync.service.ts:337:      await this.logSyncJob("prayer-methods", "methods", {
+src/modules/prayer/prayer.sync.service.ts:371:      await this.logSyncJob("prayer-methods", "methods", {
+src/modules/prayer/prayer.sync.service.ts:402:    const jobId = generateSyncJobId("prayer-times", "times", new Date());
+src/modules/prayer/prayer.sync.service.ts:556:      await this.logSyncJob(jobId, "times", {
+src/modules/prayer/prayer.sync.service.ts:578:      await this.logSyncJob(jobId, "times", {
+src/modules/prayer/prayer.sync.service.ts:615:    const jobId = generateSyncJobId("prayer-times", "calendar", new Date());
+src/modules/prayer/prayer.sync.service.ts:769:      await this.logSyncJob(jobId, "calendar", {
+src/modules/prayer/prayer.sync.service.ts:795:      await this.logSyncJob(jobId, "calendar", {
+src/modules/prayer/prayer.sync.service.ts:832:    const jobId = generateSyncJobId("prayer-times", "hijri-calendar", new Date());
+src/modules/prayer/prayer.sync.service.ts:986:      await this.logSyncJob(jobId, "hijri-calendar", {
+src/modules/prayer/prayer.sync.service.ts:1012:      await this.logSyncJob(jobId, "hijri-calendar", {
+src/modules/prayer/prayer.sync.service.ts:1041:    const jobId = generateSyncJobId("prayer-times", "times", new Date());
+src/modules/prayer/prayer.sync.service.ts:1239:      await this.logSyncJob("prayer-times", "times", {
+src/modules/prayer/prayer.sync.service.ts:1271:      await this.logSyncJob("prayer-times", "times", {
+src/modules/prayer/prayer.sync.service.ts:1390:    const jobId = generateSyncJobId("prayer-times", "times", new Date());
+src/modules/prayer/prayer.sync.service.ts:1527:      await this.logSyncJob(jobId, "times", {
+src/modules/prayer/prayer.sync.service.ts:1550:      await this.logSyncJob(jobId, "times", {
+src/modules/prayer/prayer.sync.service.ts:1701:  private async logSyncJob(
+src/modules/prayer/prayer-prerequisites.service.ts:3:import { PrayerSyncService } from './prayer.sync.service';
+src/modules/prayer/prayer-prerequisites.service.ts:18:    private prayerSyncService: PrayerSyncService,
+src/modules/prayer/prayer-prerequisites.service.ts:92:        const methodsResult = await this.prayerSyncService.syncCalculationMethods({
+src/modules/prayer/prayer-prerequisites.service.ts:130:            const result = await this.prayerSyncService.syncPrayerTimes(
+src/modules/prayer/tests/prayer.sync.service.spec.ts:3:import { PrayerSyncService } from '../prayer.sync.service';
+src/modules/prayer/tests/prayer.sync.service.spec.ts:9:describe('PrayerSyncService', () => {
+src/modules/prayer/tests/prayer.sync.service.spec.ts:10:  let service: PrayerSyncService;
+src/modules/prayer/tests/prayer.sync.service.spec.ts:20:        PrayerSyncService,
+src/modules/prayer/tests/prayer.sync.service.spec.ts:73:    service = module.get<PrayerSyncService>(PrayerSyncService);
+src/modules/prayer/prayer.module.ts:4:import { PrayerSyncService } from "./prayer.sync.service";
+src/modules/prayer/prayer.module.ts:14:  providers: [PrayerService, PrayerSyncService, PrayerPrerequisitesService, PrayerMapper],
+src/modules/prayer/prayer.module.ts:15:  exports: [PrayerService, PrayerSyncService, PrayerPrerequisitesService, PrayerMapper],
+src/modules/admin/admin.service.ts:4:import { WorkerService, SyncJob } from "../../workers/worker.service";
+src/modules/admin/admin.service.ts:5:import { QuranSyncService } from "../quran/quran.sync.service";
+src/modules/admin/admin.service.ts:6:import { PrayerSyncService } from "../prayer/prayer.sync.service";
+src/modules/admin/admin.service.ts:7:import { HadithSyncService } from "../hadith/hadith-sync.service";
+src/modules/admin/admin.service.ts:8:import { AudioSyncService } from "../audio/audio.sync.service";
+src/modules/admin/admin.service.ts:56:    private readonly quranSync: QuranSyncService,
+src/modules/admin/admin.service.ts:57:    private readonly prayerSync: PrayerSyncService,
+src/modules/admin/admin.service.ts:58:    private readonly hadithSync: HadithSyncService,
+src/modules/admin/admin.service.ts:59:    private readonly audioSync: AudioSyncService,
+src/modules/admin/admin.service.ts:339:      const job = await this.workerService.addSyncJob(syncJob);
+src/modules/admin/admin.service.ts:371:      const job = await this.workerService.addSyncJob(syncJob);
+src/modules/admin/admin.service.ts:707:      const job = await this.workerService.addSyncJob(syncJob);
+src/modules/admin/admin.service.ts:844:      const job = await this.workerService.addSyncJob(syncJob);
+src/modules/quran/quran.module.ts:5:import { QuranSyncService } from "./quran.sync.service";
+src/modules/quran/quran.module.ts:14:  providers: [QuranService, QuranSyncService, QuranMapper],
+src/modules/quran/quran.module.ts:15:  exports: [QuranService, QuranSyncService, QuranMapper],
+src/modules/quran/quran-sync.worker.ts:5:import { QuranSyncService } from "./quran.sync.service";
+src/modules/quran/quran-sync.worker.ts:7:export interface QuranSyncJob {
+src/modules/quran/quran-sync.worker.ts:20:    private quranSync: QuranSyncService,
+src/modules/quran/quran-sync.worker.ts:23:  async processJob(job: Job<QuranSyncJob>) {
+src/modules/quran/quran.sync.service.ts:6:import { generateSyncJobId } from "../../common/common.module";
+src/modules/quran/quran.sync.service.ts:26:export class QuranSyncService {
+src/modules/quran/quran.sync.service.ts:27:  private readonly logger = new Logger(QuranSyncService.name);
+src/modules/quran/quran.sync.service.ts:40:    const jobId = generateSyncJobId("quran-chapters", "chapters", new Date());
+src/modules/quran/quran.sync.service.ts:140:      await this.logSyncJob("quran-chapters", "chapters", {
+src/modules/quran/quran.sync.service.ts:174:      await this.logSyncJob("quran-chapters", "chapters", {
+src/modules/quran/quran.sync.service.ts:199:    const jobId = generateSyncJobId("quran-verses", "verses", new Date());
+src/modules/quran/quran.sync.service.ts:299:      await this.logSyncJob("quran-verses", "verses", {
+src/modules/quran/quran.sync.service.ts:331:      await this.logSyncJob("quran-verses", "verses", {
+src/modules/quran/quran.sync.service.ts:358:    const jobId = generateSyncJobId(
+src/modules/quran/quran.sync.service.ts:459:      await this.logSyncJob("quran-translations", "translations", {
+src/modules/quran/quran.sync.service.ts:548:        await this.logSyncJob("quran-translations", "translations", {
+src/modules/quran/quran.sync.service.ts:571:      await this.logSyncJob("quran-translations", "translations", {
+src/modules/quran/quran.sync.service.ts:615:    const jobId = generateSyncJobId(
+src/modules/quran/quran.sync.service.ts:755:      await this.logSyncJob(jobId, "verse-translations", {
+src/modules/quran/quran.sync.service.ts:780:      await this.logSyncJob(jobId, "verse-translations", {
+src/modules/quran/quran.sync.service.ts:793:  private async logSyncJob(
+src/modules/common/scheduler.service.ts:5:import { QuranSyncService } from "../quran/quran.sync.service";
+src/modules/common/scheduler.service.ts:6:import { PrayerSyncService } from "../prayer/prayer.sync.service";
+src/modules/common/scheduler.service.ts:7:import { HadithSyncService } from "../hadith/hadith-sync.service";
+src/modules/common/scheduler.service.ts:8:import { AudioSyncService } from "../audio/audio.sync.service";
+src/modules/common/scheduler.service.ts:18:    private readonly quranSync: QuranSyncService,
+src/modules/common/scheduler.service.ts:19:    private readonly prayerSync: PrayerSyncService,
+src/modules/common/scheduler.service.ts:20:    private readonly hadithSync: HadithSyncService,
+src/modules/common/scheduler.service.ts:21:    private readonly audioSync: AudioSyncService,
+src/modules/common/scheduler.service.ts:34:      await this.logSyncJob("quran-daily", "quran-chapters", "started");
+src/modules/common/scheduler.service.ts:43:      const job = await this.workerService.addSyncJob(syncJob);
+src/modules/common/scheduler.service.ts:46:      await this.logSyncJob("quran-daily", "quran-chapters", "started");
+src/modules/common/scheduler.service.ts:50:      await this.logSyncJob(
+src/modules/common/scheduler.service.ts:68:      await this.logSyncJob("prayer-prewarm", "prayer-times", "started");
+src/modules/common/scheduler.service.ts:77:      const job = await this.workerService.addSyncJob(syncJob);
+src/modules/common/scheduler.service.ts:80:      await this.logSyncJob("prayer-prewarm", "prayer-times", "started");
+src/modules/common/scheduler.service.ts:84:      await this.logSyncJob(
+src/modules/common/scheduler.service.ts:102:      await this.logSyncJob("hadith-sync", "hadith-collections", "started");
+src/modules/common/scheduler.service.ts:111:      const job = await this.workerService.addSyncJob(syncJob);
+src/modules/common/scheduler.service.ts:114:      await this.logSyncJob("hadith-sync", "hadith-collections", "started");
+src/modules/common/scheduler.service.ts:118:      await this.logSyncJob(
+src/modules/common/scheduler.service.ts:136:      await this.logSyncJob("audio-sync", "audio-files", "started");
+src/modules/common/scheduler.service.ts:139:      await this.logSyncJob("audio-sync", "audio-files", "success");
+src/modules/common/scheduler.service.ts:143:      await this.logSyncJob(
+src/modules/common/scheduler.service.ts:161:      await this.logSyncJob("gold-price-update", "gold-prices", "started");
+src/modules/common/scheduler.service.ts:163:      await this.logSyncJob("gold-price-update", "gold-prices", "success");
+src/modules/common/scheduler.service.ts:167:      await this.logSyncJob(
+src/modules/common/scheduler.service.ts:227:  private async logSyncJob(
+src/modules/audio/audio.module.ts:9:import { AudioSyncService } from "./audio.sync.service";
+src/modules/audio/audio.module.ts:18:    AudioSyncService,
+src/modules/audio/audio.module.ts:24:    AudioSyncService,
+src/modules/audio/audio.sync.service.ts:16:export class AudioSyncService {
+src/modules/audio/audio.sync.service.ts:17:  private readonly logger = new Logger(AudioSyncService.name);
+src/modules/audio/audio.sync.service.ts:97:      await this.logSyncJob("reciters-sync", "reciters", "success", {
+src/modules/audio/audio.sync.service.ts:114:      await this.logSyncJob("reciters-sync", "reciters", "failed", {
+src/modules/audio/audio.sync.service.ts:298:      await this.logSyncJob("audio-files-sync", "audio_files", "success", {
+src/modules/audio/audio.sync.service.ts:315:      await this.logSyncJob("audio-files-sync", "audio_files", "failed", {
+src/modules/audio/audio.sync.service.ts:343:  private async logSyncJob(
+src/modules/hadith/hadith-sync.service.ts:26:export class HadithSyncService {
+src/modules/hadith/hadith-sync.service.ts:27:  private readonly logger = new Logger(HadithSyncService.name);
+src/modules/hadith/admin-hadith.controller.ts:9:import { HadithSyncService } from "./hadith-sync.service";
+src/modules/hadith/admin-hadith.controller.ts:17:    private readonly hadithSyncService: HadithSyncService,
+src/modules/hadith/admin-hadith.controller.ts:26:    const syncStatus = await this.hadithSyncService.getSyncStatus();
+src/modules/hadith/admin-hadith.controller.ts:110:      this.hadithSyncService.syncCollection(collectionName).catch((error) => {
+src/modules/hadith/admin-hadith.controller.ts:133:      this.hadithSyncService.syncAllCollections().catch((error) => {
+src/modules/hadith/admin-hadith.controller.ts:153:    const progress = this.hadithSyncService.getSyncProgress(collectionName);
+src/modules/hadith/admin-hadith.controller.ts:165:    const progress = this.hadithSyncService.getSyncProgress();
+src/modules/hadith/hadith.module.ts:11:import { HadithSyncService } from "./hadith-sync.service";
+src/modules/hadith/hadith.module.ts:21:    HadithSyncService,
+src/modules/hadith/hadith.module.ts:28:    HadithSyncService,
+src/modules/hadith/hadith-sync.service.spec.ts:3:import { HadithSyncService } from "./hadith-sync.service";
+src/modules/hadith/hadith-sync.service.spec.ts:9:describe("HadithSyncService", () => {
+src/modules/hadith/hadith-sync.service.spec.ts:10:  let service: HadithSyncService;
+src/modules/hadith/hadith-sync.service.spec.ts:52:        HadithSyncService,
+src/modules/hadith/hadith-sync.service.spec.ts:72:    service = module.get<HadithSyncService>(HadithSyncService);

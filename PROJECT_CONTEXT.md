@@ -1,8 +1,8 @@
 # 🕌 DeenMate - Production Context & Architecture
 
-**Last Updated**: September 20, 2025  
-**Version**: 3.2.0  
-**Status**: Production Ready - Complete Job Control System with Verified Operations  
+**Last Updated**: September 21, 2025  
+**Version**: 3.3.0  
+**Status**: Critical Architecture Issues Identified - Sync System Requires Immediate Fixes  
 **Document Type**: Single Source of Truth for AI-Assisted Development
 
 ---
@@ -14,11 +14,11 @@ DeenMate is a production-grade Islamic utility platform providing comprehensive 
 ### **Current Status**
 - ✅ **Backend API**: Fully operational with 7/7 modules working (100% success rate)
 - ✅ **Admin Dashboard**: **INTEGRATED** - Next.js static export successfully merged into NestJS monolith
-- ✅ **Single Process Architecture**: **COMPLETE** - Single Node.js process serving both API and admin dashboard
-- ✅ **Static File Serving**: **OPERATIONAL** - ServeStaticModule serving admin dashboard at `/admin/*`
+- ✅ **Single Process Architecture**: **COMPLETE** - Single Node.js process serving both API and admin dashboard on port 3000
+- ✅ **Static File Serving**: **OPERATIONAL** - ServeStaticModule serving admin dashboard at `/admin/*` on same port
 - ✅ **Authentication**: JWT-based security system with refresh tokens implemented
 - ✅ **Database**: PostgreSQL with Prisma ORM, fully populated with enhanced schema
-- ✅ **Sync System**: Complete BullMQ queue system with all sync modules operational
+- 🔴 **Sync System**: **CRITICAL ISSUES IDENTIFIED** - BullMQ queue system has duplicate processing and routing problems
 - ✅ **Audio Sync**: **FIXED** - Foreign key constraints and reciter ID mapping resolved
 - ✅ **Gold Price Sync**: **FIXED** - Service method call corrected from scheduler to service
 - ✅ **Prayer Sync**: **FIXED** - Timezone issues, date parsing, and API response structure resolved
@@ -29,14 +29,23 @@ DeenMate is a production-grade Islamic utility platform providing comprehensive 
 - ✅ **URL State Management**: Filter persistence across page refreshes
 - ✅ **Security**: Comprehensive security headers and password policy implemented
 - ✅ **Migration Cleanup**: **COMPLETE** - All temporary files and migration artifacts removed
-- ⚠️ **Test Coverage**: Partial test coverage - **73% success rate** (32/44 tests passing, 6/8 test suites passing) - Date mocking issues identified
-- ✅ **Comprehensive Audit**: Full repository and runtime audit completed with 95/100 health score
+- ⚠️ **Test Coverage**: **73% success rate** (32/44 tests passing, 6/8 test suites passing) - Date mocking issues identified
+- 🔴 **Critical Architecture Issues**: **IDENTIFIED** - Duplicate job processing, inconsistent routing, incomplete cancellation
 - ✅ **Security Audit**: All security measures verified and functional
 - ✅ **Build Verification**: Local and Docker builds working correctly
 
+### **🚨 CRITICAL ISSUES REQUIRING IMMEDIATE ATTENTION**
+**See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for detailed analysis and fix plan**
+
+- 🔴 **Duplicate Job Processing**: Jobs processed by both dedicated and legacy processors
+- 🔴 **Inconsistent Job Routing**: Multiple conflicting job triggering mechanisms
+- 🔴 **Incomplete Cancellation**: Cancellation not implemented in all processors
+- 🔴 **Missing Dependencies**: Processors missing required services for full functionality
+- 🔴 **Inconsistent SYNC_ENABLED Checks**: Not implemented consistently across processors
+
 ### **Architecture Pattern**
-- **Monolithic Backend**: Single NestJS application with modular structure
-- **Admin Dashboard**: Integrated Next.js static export served via ServeStaticModule
+- **Monolithic Backend**: Single NestJS application with modular structure running on port 3000
+- **Admin Dashboard**: Integrated Next.js static export served via ServeStaticModule at `/admin/*` on same port
 - **Database**: PostgreSQL with Prisma ORM
 - **Caching**: Redis for performance optimization and session management
 - **Queue System**: BullMQ for asynchronous job processing
@@ -588,11 +597,12 @@ GET /api/v4/admin/health  # System health check with database and Redis status
 ```
 
 ### **BullMQ Queue System**
-- **Queue Name**: `sync-queue`
-- **Processor**: `SyncJobsProcessor`
+- **Queue Names**: `sync-queue`, `prayer-sync-queue`, `quran-sync-queue`, `hadith-sync-queue`, `cache-queue`
+- **Processors**: `SyncJobsProcessor` (legacy), `PrayerSyncProcessor`, `QuranSyncProcessor`, `HadithSyncProcessor`
 - **Job Types**: `quran`, `hadith`, `prayer`, `audio`, `zakat`
 - **Retry Logic**: Configurable retry attempts
 - **Error Handling**: Comprehensive error logging
+- **⚠️ CRITICAL ISSUES**: Duplicate processing, inconsistent routing, incomplete cancellation - See [PROJECT_STATUS.md](./PROJECT_STATUS.md)
 
 ### **Logging & Metrics**
 - **Sync Job Logs**: Stored in `sync_job_log` table
@@ -1083,7 +1093,7 @@ Following the successful admin dashboard integration and cleanup, a comprehensiv
 
 ### **✅ Completed Achievements**
 - **Admin Dashboard Integration**: Successfully merged Next.js admin dashboard into NestJS monolith
-- **Single Process Architecture**: Single Node.js process serving both API (`/api/v4/*`) and admin dashboard (`/admin/*`)
+- **Single Process Architecture**: Single Node.js process serving both API (`/api/v4/*`) and admin dashboard (`/admin/*`) on port 3000
 - **Static File Serving**: ServeStaticModule operational with correct asset prefixing
 - **Migration Cleanup**: All temporary files, reports, and migration artifacts removed
 - **Build Process**: Both local and Docker builds working correctly

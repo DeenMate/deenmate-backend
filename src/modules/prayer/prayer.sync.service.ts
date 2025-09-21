@@ -397,12 +397,14 @@ export class PrayerSyncService {
     methodId: number,
     school: number,
     options: PrayerSyncOptions = {},
+    isCancelled?: () => Promise<boolean>,
+    jobId?: string,
   ): Promise<PrayerSyncResult> {
     const startTime = Date.now();
-    const jobId = generateSyncJobId("prayer-times", "times", new Date());
+    const internalJobId = jobId || generateSyncJobId("prayer-times", "times", new Date());
 
     this.logger.log(
-      `[syncPrayerTimesForMethod] Starting prayer times sync for ${latitude},${longitude} method=${methodId} school=${school} (Job: ${jobId})`,
+      `[syncPrayerTimesForMethod] Starting prayer times sync for ${latitude},${longitude} method=${methodId} school=${school} (Job: ${internalJobId})`,
     );
     this.logger.log(`[syncPrayerTimesForMethod] Options: ${JSON.stringify(options)}`);
 
@@ -446,6 +448,29 @@ export class PrayerSyncService {
       const errors: string[] = [];
 
       for (let d = new Date(dateRange.start); d <= dateRange.end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
+        // Check for cancellation before processing each date
+        if (isCancelled) {
+          try {
+            const cancelled = await isCancelled();
+            if (cancelled) {
+              this.logger.log(`Prayer times sync cancelled at date ${d.toISOString().split('T')[0]}`);
+              throw new Error('Job cancelled by user');
+            }
+          } catch (error) {
+            // Re-throw pause errors as-is
+            if (error.message === 'Job paused by user') {
+              this.logger.log(`Prayer times sync paused at date ${d.toISOString().split('T')[0]}`);
+              throw error;
+            }
+            // Re-throw cancellation errors as-is
+            if (error.message === 'Job cancelled by user') {
+              throw error;
+            }
+            // For other errors, log and continue
+            this.logger.warn(`Error checking cancellation status: ${error.message}`);
+          }
+        }
+
         try {
           // Format date as DD-MM-YYYY for Aladhan API
           const dateStr = `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()}`;
@@ -553,7 +578,7 @@ export class PrayerSyncService {
         }
       }
 
-      await this.logSyncJob(jobId, "times", {
+      await this.logSyncJob(internalJobId, "times", {
         startedAt: new Date(startTime),
         finishedAt: new Date(),
         status: "success",
@@ -575,7 +600,7 @@ export class PrayerSyncService {
     } catch (error) {
       this.logger.error(`Prayer times sync failed: ${error.message}`, error.stack);
       
-      await this.logSyncJob(jobId, "times", {
+      await this.logSyncJob(internalJobId, "times", {
         startedAt: new Date(startTime),
         finishedAt: new Date(),
         status: "failed",
@@ -1036,12 +1061,13 @@ export class PrayerSyncService {
     latitude: number,
     longitude: number,
     options: PrayerSyncOptions = {},
+    jobId?: string,
   ): Promise<PrayerSyncResult> {
     const startTime = Date.now();
-    const jobId = generateSyncJobId("prayer-times", "times", new Date());
+    const internalJobId = jobId || generateSyncJobId("prayer-times", "times", new Date());
 
     this.logger.log(
-      `[syncPrayerTimes] Starting prayer times sync for ${latitude},${longitude} (Job: ${jobId})`,
+      `[syncPrayerTimes] Starting prayer times sync for ${latitude},${longitude} (Job: ${internalJobId})`,
     );
     this.logger.log(`[syncPrayerTimes] Options: ${JSON.stringify(options)}`);
 
@@ -1291,7 +1317,7 @@ export class PrayerSyncService {
     }
   }
 
-  async prewarmAllLocations(days: number = 7): Promise<PrayerSyncResult> {
+  async prewarmAllLocations(days: number = 7, jobId?: string, isCancelled?: () => Promise<boolean>): Promise<PrayerSyncResult> {
     const startTime = Date.now();
     
     if (!this.isSyncEnabled) {
@@ -1333,6 +1359,26 @@ export class PrayerSyncService {
     this.logger.log(`Prewarming ${locations.length} locations for ${days} days with ${methods.length} methods and 2 school types`);
 
     for (const loc of locations) {
+      // Check for cancellation before processing each location
+      if (isCancelled) {
+        try {
+          const cancelled = await isCancelled();
+          if (cancelled) {
+            this.logger.log(`Prayer prewarm cancelled at location ${loc.city || loc.country}`);
+            throw new Error('Job cancelled by user');
+          }
+        } catch (error) {
+          if (error.message === 'Job paused by user') {
+            this.logger.log(`Prayer prewarm paused at location ${loc.city || loc.country}`);
+            throw error;
+          }
+          if (error.message === 'Job cancelled by user') {
+            throw error;
+          }
+          this.logger.warn(`Error checking cancellation status: ${error.message}`);
+        }
+      }
+
       for (const method of methods) {
         // Sync for both school types: 0=Shafi, 1=Hanafi
         for (const school of [0, 1]) {
@@ -1344,22 +1390,40 @@ export class PrayerSyncService {
                 force: true,
                 resource: 'times',
                 dateRange: { start: today, end },
-              });
+              }, isCancelled, jobId);
             } else {
               // Fallback to lat/lng
               res = await this.syncPrayerTimesForMethod(loc.lat, loc.lng, method.id, school, {
                 force: true,
                 resource: 'times',
                 dateRange: { start: today, end },
-              });
+              }, isCancelled, jobId);
             }
             processed += res.recordsProcessed;
             inserted += res.recordsInserted;
             updated += res.recordsUpdated;
             failed += res.recordsFailed;
           } catch (e) {
-            failed++;
-            errors.push(`${method.methodCode}/school${school}: ${e instanceof Error ? e.message : String(e)}`);
+            // Handle pause vs cancellation differently
+            if (e.message === 'Job paused by user') {
+              this.logger.log(`Prayer prewarm paused at ${loc.city || loc.country} with ${method.methodCode}/school${school}`);
+              throw e; // Re-throw to be handled by the main process method
+            } else if (e.message === 'Job cancelled by user') {
+              this.logger.log(`Prayer prewarm cancelled at ${loc.city || loc.country} with ${method.methodCode}/school${school}`);
+              return {
+                success: false,
+                resource: 'prewarm',
+                recordsProcessed: processed,
+                recordsInserted: inserted,
+                recordsUpdated: updated,
+                recordsFailed: failed,
+                errors: ['Job cancelled by user'],
+                durationMs: Date.now() - startTime,
+              };
+            } else {
+              failed++;
+              errors.push(`${method.methodCode}/school${school}: ${e instanceof Error ? e.message : String(e)}`);
+            }
           }
           // small delay to be nice to upstream
           await this.sleep(50);
@@ -1385,12 +1449,14 @@ export class PrayerSyncService {
     methodId: number,
     school: number,
     options: PrayerSyncOptions = {},
+    isCancelled?: () => Promise<boolean>,
+    jobId?: string,
   ): Promise<PrayerSyncResult> {
     const startTime = Date.now();
-    const jobId = generateSyncJobId("prayer-times", "times", new Date());
+    const internalJobId = jobId || generateSyncJobId("prayer-times", "times", new Date());
 
     this.logger.log(
-      `Starting prayer times sync for ${city}, ${country} method=${methodId} school=${school} (Job: ${jobId})`,
+      `Starting prayer times sync for ${city}, ${country} method=${methodId} school=${school} (Job: ${internalJobId})`,
     );
 
     try {
@@ -1418,6 +1484,29 @@ export class PrayerSyncService {
       const errors: string[] = [];
 
       for (let d = new Date(dateRange.start); d <= dateRange.end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
+        // Check for cancellation before processing each date
+        if (isCancelled) {
+          try {
+            const cancelled = await isCancelled();
+            if (cancelled) {
+              this.logger.log(`Prayer times sync cancelled at date ${d.toISOString().split('T')[0]}`);
+              throw new Error('Job cancelled by user');
+            }
+          } catch (error) {
+            // Re-throw pause errors as-is
+            if (error.message === 'Job paused by user') {
+              this.logger.log(`Prayer times sync paused at date ${d.toISOString().split('T')[0]}`);
+              throw error;
+            }
+            // Re-throw cancellation errors as-is
+            if (error.message === 'Job cancelled by user') {
+              throw error;
+            }
+            // For other errors, log and continue
+            this.logger.warn(`Error checking cancellation status: ${error.message}`);
+          }
+        }
+
         try {
           // Format date as DD-MM-YYYY for Aladhan API
           const dateStr = `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()}`;
@@ -1524,7 +1613,7 @@ export class PrayerSyncService {
         }
       }
 
-      await this.logSyncJob(jobId, "times", {
+      await this.logSyncJob(internalJobId, "times", {
         startedAt: new Date(startTime),
         finishedAt: new Date(),
         status: "success",
@@ -1547,7 +1636,7 @@ export class PrayerSyncService {
       const errorMsg = `Prayer times sync failed for ${city}, ${country}: ${error.message}`;
       this.logger.error(errorMsg);
 
-      await this.logSyncJob(jobId, "times", {
+      await this.logSyncJob(internalJobId, "times", {
         startedAt: new Date(startTime),
         finishedAt: new Date(),
         status: "failed",

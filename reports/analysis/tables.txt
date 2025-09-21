@@ -1,0 +1,31 @@
+         table_name         
+----------------------------
+ _prisma_migrations
+ admin_audit_logs
+ admin_users
+ api_endpoint_stats
+ api_request_logs
+ client_ip_stats
+ gold_prices
+ hadith_books
+ hadith_collections
+ hadith_items
+ ip_blocking_rules
+ prayer_calculation_methods
+ prayer_locations
+ prayer_times
+ quran_audio_files
+ quran_chapters
+ quran_reciters
+ quran_verses
+ rate_limit_rules
+ sync_job_audit_logs
+ sync_job_control
+ sync_job_logs
+ sync_job_schedules
+ translation_jobs
+ translation_resources
+ verse_translations
+ zakat_calculations
+(27 rows)
+

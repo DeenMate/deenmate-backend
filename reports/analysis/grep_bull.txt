@@ -1,0 +1,73 @@
+src/app.module.ts:4:import { BullModule } from "@nestjs/bullmq";
+src/app.module.ts:45:    // BullMQ Configuration
+src/app.module.ts:46:    BullModule.forRoot({
+src/app.module.ts:52:    BullModule.registerQueue({
+src/workers/worker.module.ts:3:import { SyncJobsProcessor } from './sync-jobs.processor';
+src/workers/worker.module.ts:24:  providers: [WorkerService, SyncJobsProcessor, JobControlService, JobControlGateway],
+src/workers/worker.service.ts:3:import { Queue } from "bullmq";
+src/workers/worker.service.ts:22:  private syncQueue: Queue;
+src/workers/worker.service.ts:23:  private cacheQueue: Queue;
+src/workers/worker.service.ts:26:    this.initializeQueues();
+src/workers/worker.service.ts:29:  private async initializeQueues() {
+src/workers/worker.service.ts:32:      this.syncQueue = new Queue("sync-queue", {
+src/workers/worker.service.ts:40:      this.cacheQueue = new Queue("cache-queue", {
+src/workers/worker.service.ts:55:      const addedJob = await this.syncQueue.add(job.type, job, {
+src/workers/worker.service.ts:79:      const addedJob = await this.cacheQueue.add("warm-cache", job, {
+src/workers/worker.service.ts:93:  async getQueueStats(): Promise<any> {
+src/workers/worker.service.ts:96:        this.syncQueue.getJobCounts(),
+src/workers/worker.service.ts:97:        this.cacheQueue.getJobCounts(),
+src/workers/worker.service.ts:101:        syncQueue: syncStats,
+src/workers/worker.service.ts:102:        cacheQueue: cacheStats,
+src/workers/worker.service.ts:111:  async clearQueue(queueName: "sync" | "cache"): Promise<boolean> {
+src/workers/worker.service.ts:113:      const queue = queueName === "sync" ? this.syncQueue : this.cacheQueue;
+src/workers/worker.service.ts:126:      const queue = queueName === "sync" ? this.syncQueue : this.cacheQueue;
+src/workers/worker.service.ts:151:      await this.syncQueue.add(
+src/workers/worker.service.ts:162:      await this.cacheQueue.add(
+src/workers/worker.service.ts:184:      const job = await this.syncQueue.getJob(jobId);
+src/workers/worker.service.ts:202:      const job = await this.syncQueue.getJob(jobId);
+src/workers/worker.service.ts:220:      const job = await this.syncQueue.getJob(jobId);
+src/workers/worker.service.ts:237:      const job = await this.syncQueue.getJob(jobId);
+src/workers/worker.service.ts:254:      const job = await this.syncQueue.getJob(jobId);
+src/workers/worker.service.ts:260:      // Note: BullMQ doesn't support updating job priority after creation
+src/workers/worker.service.ts:272:      const job = await this.syncQueue.getJob(jobId);
+src/workers/worker.service.ts:297:      const job = await this.syncQueue.getJob(jobId);
+src/workers/sync-jobs.processor.ts:1:import { Processor, WorkerHost } from '@nestjs/bullmq';
+src/workers/sync-jobs.processor.ts:15:@Processor('sync-queue')
+src/workers/sync-jobs.processor.ts:16:export class SyncJobsProcessor extends WorkerHost {
+src/workers/sync-jobs.processor.ts:17:  private readonly logger = new Logger(SyncJobsProcessor.name);
+src/modules/admin/job-control/job-control.controller.ts:102:  // Queue status (must be before parameterized routes)
+src/modules/admin/job-control/job-control.controller.ts:105:  @ApiResponse({ status: 200, description: 'Queue status retrieved successfully' })
+src/modules/admin/job-control/job-control.controller.ts:106:  async getQueueStatus() {
+src/modules/admin/job-control/job-control.controller.ts:107:    const status = await this.jobControlService.getQueueStatus();
+src/modules/admin/job-control/job-control.gateway.ts:84:  emitQueueStatusUpdate(queueStatus: any): void {
+src/modules/admin/job-control/job-control.service.ts:14:  QueueStatus,
+src/modules/admin/job-control/job-control.service.ts:43:      // Try to pause the BullMQ job (may not exist for old jobs)
+src/modules/admin/job-control/job-control.service.ts:46:        this.logger.warn(`BullMQ job ${jobId} not found, updating database status only`);
+src/modules/admin/job-control/job-control.service.ts:97:      // Actually resume the BullMQ job
+src/modules/admin/job-control/job-control.service.ts:100:        this.logger.warn(`BullMQ job ${jobId} not found, updating database status only`);
+src/modules/admin/job-control/job-control.service.ts:144:      // Actually cancel the BullMQ job
+src/modules/admin/job-control/job-control.service.ts:147:        this.logger.warn(`BullMQ job ${jobId} not found, updating database status only`);
+src/modules/admin/job-control/job-control.service.ts:191:      // Actually delete the BullMQ job
+src/modules/admin/job-control/job-control.service.ts:194:        this.logger.warn(`BullMQ job ${jobId} not found, deleting database record only`);
+src/modules/admin/job-control/job-control.service.ts:462:  async getQueueStatus(): Promise<QueueStatus> {
+src/modules/admin/job-control/job-control.service.ts:464:      const stats = await this.workerService.getQueueStats();
+src/modules/admin/job-control/job-control.service.ts:467:        waiting: stats.syncQueue?.waiting || 0,
+src/modules/admin/job-control/job-control.service.ts:468:        active: stats.syncQueue?.active || 0,
+src/modules/admin/job-control/job-control.service.ts:469:        completed: stats.syncQueue?.completed || 0,
+src/modules/admin/job-control/job-control.service.ts:470:        failed: stats.syncQueue?.failed || 0,
+src/modules/admin/job-control/job-control.service.ts:471:        delayed: stats.syncQueue?.delayed || 0,
+src/modules/admin/job-control/job-control.service.ts:472:        paused: stats.syncQueue?.paused || 0,
+src/modules/admin/job-control/interfaces/job-control.interface.ts:80:export interface QueueStatus {
+src/modules/admin/admin.controller.ts:378:  @ApiResponse({ status: 200, description: "Queue statistics retrieved successfully" })
+src/modules/admin/admin.controller.ts:379:  async getQueueStats() {
+src/modules/admin/admin.controller.ts:380:    const stats = await this.adminService.getQueueStats();
+src/modules/admin/admin.service.ts:911:  async getQueueStats(): Promise<any> {
+src/modules/admin/admin.service.ts:913:      return await this.workerService.getQueueStats();
+src/modules/common/scheduler.service.ts:36:      // Queue the quran sync job instead of running synchronously
+src/modules/common/scheduler.service.ts:70:      // Queue the prayer sync job instead of running synchronously
+src/modules/common/scheduler.service.ts:104:      // Queue the hadith sync job instead of running synchronously
+src/modules/hadith/hadith-sync.service.spec.ts:7:import { Queue } from "bullmq";
+src/modules/hadith/hadith-sync.service.spec.ts:36:  const mockTranslationQueue = {
+src/modules/hadith/hadith-sync.service.spec.ts:66:          provide: "BullQueue_translation",
+src/modules/hadith/hadith-sync.service.spec.ts:67:          useValue: mockTranslationQueue,
+src/modules/hadith/hadith-sync.service.spec.ts:75:    module.get<Queue>("BullQueue_translation");

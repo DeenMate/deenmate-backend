@@ -1,0 +1,20 @@
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:10 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mFetched 7 verses for chapter 107[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:11 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mFetched 3 verses for chapter 108[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:11 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mFetched 6 verses for chapter 109[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:11 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mFetched 3 verses for chapter 110[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:11 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mFetched 5 verses for chapter 111[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:11 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mFetched 4 verses for chapter 112[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:12 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mFetched 5 verses for chapter 113[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:12 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mFetched 6 verses for chapter 114[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:12 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mQuran verses sync completed: {"success":true,"resource":"verses","recordsProcessed":6236,"recordsInserted":0,"recordsUpdated":6236,"recordsFailed":0,"errors":[],"durationMs":64882}[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:12 PM [32m    LOG[39m [38;5;3m[SyncJobsProcessor] [39m[32mQuran verses sync result: {"success":true,"resource":"verses","recordsProcessed":6236,"recordsInserted":0,"recordsUpdated":6236,"recordsFailed":0,"errors":[],"durationMs":64882}[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:12 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mStarting Quran translation resources sync (Job: quran-translations_translations_2025-09-20T15-36-12-541Z)[39m
+[31m[Nest] 13072  - [39m09/20/2025, 9:36:12 PM [31m  ERROR[39m [38;5;3m[QuranSyncService] [39m[31mQuran translation resources sync failed: Rate limit exceeded for host api.quran.com[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:12 PM [32m    LOG[39m [38;5;3m[SyncJobsProcessor] [39m[32mQuran translations sync result: {"success":false,"resource":"translations","recordsProcessed":0,"recordsInserted":0,"recordsUpdated":0,"recordsFailed":1,"errors":["Quran translation resources sync failed: Rate limit exceeded for host api.quran.com"],"durationMs":8}[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:12 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mStarting Quran verse translations sync (Job: quran-verse-translations_verse-translations_2025-09-20T15-36-12-555Z)[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:13 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mSyncing translations for 6236 verses with 13 translation resources[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:14 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mProcessed 0/6236 verses[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:18 PM [32m    LOG[39m [38;5;3m[WorkerService] [39m[32mSync job added: prayer:sync (ID: 20)[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:36:18 PM [32m    LOG[39m [38;5;3m[AdminService] [39m[32mPrayer sync job queued with ID: 20[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:38:14 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mProcessed 100/6236 verses[39m
+[32m[Nest] 13072  - [39m09/20/2025, 9:40:17 PM [32m    LOG[39m [38;5;3m[QuranSyncService] [39m[32mProcessed 200/6236 verses[39m

@@ -37,8 +37,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     const socket = io(`${url}${namespace}`, {
       transports: ['websocket'],
-      timeout: 20000,
-      forceNew: true,
+      timeout: 30000,
+      forceNew: false, // Don't force new connections
+      reconnection: true,
+      reconnectionDelay: 2000, // Increased delay
+      reconnectionAttempts: 3, // Reduced attempts
+      maxReconnectionAttempts: 3,
+      reconnectionDelayMax: 10000, // Max delay between reconnections
+      randomizationFactor: 0.5, // Add randomization to prevent thundering herd
     });
 
     socketRef.current = socket;

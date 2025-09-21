@@ -1,0 +1,5 @@
+ prayer_times_count 
+--------------------
+                  0
+(1 row)
+

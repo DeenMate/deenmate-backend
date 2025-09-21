@@ -1,0 +1,86 @@
+src/workers/worker.service.ts:182:  async pauseJob(jobId: string): Promise<boolean> {
+src/workers/worker.service.ts:191:      await job.moveToFailed(new Error('Job paused by user'), '0');
+src/workers/worker.service.ts:192:      this.logger.log(`Job ${jobId} paused successfully`);
+src/workers/worker.service.ts:195:      this.logger.error(`Failed to pause job ${jobId}:`, error);
+src/workers/worker.service.ts:200:  async resumeJob(jobId: string): Promise<boolean> {
+src/workers/worker.service.ts:210:      this.logger.log(`Job ${jobId} resumed successfully`);
+src/workers/worker.service.ts:213:      this.logger.error(`Failed to resume job ${jobId}:`, error);
+src/workers/worker.service.ts:218:  async cancelJob(jobId: string): Promise<boolean> {
+src/workers/worker.service.ts:226:      await job.remove();
+src/workers/worker.service.ts:227:      this.logger.log(`Job ${jobId} cancelled successfully`);
+src/workers/worker.service.ts:230:      this.logger.error(`Failed to cancel job ${jobId}:`, error);
+src/workers/worker.service.ts:243:      await job.remove();
+src/workers/worker.service.ts:281:        progress: job.progress,
+src/workers/worker.service.ts:302:      const progress = job.progress;
+src/modules/admin/security/security-headers.middleware.ts:34:    res.removeHeader('X-Powered-By');
+src/modules/admin/security/security-headers.middleware.ts:35:    res.removeHeader('Server');
+src/modules/admin/job-control/dto/job-control.dto.ts:9:  @ApiProperty({ description: 'Action to perform', enum: ['pause', 'resume', 'cancel', 'delete'] })
+src/modules/admin/job-control/dto/job-control.dto.ts:11:  action: 'pause' | 'resume' | 'cancel' | 'delete';
+src/modules/admin/job-control/job-control.controller.ts:38:  @Post(':jobId/pause')
+src/modules/admin/job-control/job-control.controller.ts:40:  @ApiParam({ name: 'jobId', description: 'Job ID to pause' })
+src/modules/admin/job-control/job-control.controller.ts:41:  @ApiResponse({ status: 200, description: 'Job paused successfully' })
+src/modules/admin/job-control/job-control.controller.ts:43:  @ApiResponse({ status: 400, description: 'Job cannot be paused' })
+src/modules/admin/job-control/job-control.controller.ts:44:  async pauseJob(@Param('jobId') jobId: string, @Request() req) {
+src/modules/admin/job-control/job-control.controller.ts:45:    const result = await this.jobControlService.pauseJob(jobId, req.user.email);
+src/modules/admin/job-control/job-control.controller.ts:54:  @Post(':jobId/resume')
+src/modules/admin/job-control/job-control.controller.ts:55:  @ApiOperation({ summary: 'Resume a paused job' })
+src/modules/admin/job-control/job-control.controller.ts:56:  @ApiParam({ name: 'jobId', description: 'Job ID to resume' })
+src/modules/admin/job-control/job-control.controller.ts:57:  @ApiResponse({ status: 200, description: 'Job resumed successfully' })
+src/modules/admin/job-control/job-control.controller.ts:59:  @ApiResponse({ status: 400, description: 'Job cannot be resumed' })
+src/modules/admin/job-control/job-control.controller.ts:60:  async resumeJob(@Param('jobId') jobId: string, @Request() req) {
+src/modules/admin/job-control/job-control.controller.ts:61:    const result = await this.jobControlService.resumeJob(jobId, req.user.email);
+src/modules/admin/job-control/job-control.controller.ts:70:  @Post(':jobId/cancel')
+src/modules/admin/job-control/job-control.controller.ts:72:  @ApiParam({ name: 'jobId', description: 'Job ID to cancel' })
+src/modules/admin/job-control/job-control.controller.ts:73:  @ApiResponse({ status: 200, description: 'Job cancelled successfully' })
+src/modules/admin/job-control/job-control.controller.ts:75:  @ApiResponse({ status: 400, description: 'Job cannot be cancelled' })
+src/modules/admin/job-control/job-control.controller.ts:76:  async cancelJob(@Param('jobId') jobId: string, @Request() req) {
+src/modules/admin/job-control/job-control.controller.ts:77:    const result = await this.jobControlService.cancelJob(jobId, req.user.email);
+src/modules/admin/job-control/job-control.service.ts:29:  async pauseJob(jobId: string, userId: string): Promise<JobControlResult> {
+src/modules/admin/job-control/job-control.service.ts:40:        throw new BadRequestException(`Job ${jobId} is not running and cannot be paused`);
+src/modules/admin/job-control/job-control.service.ts:43:      // Try to pause the BullMQ job (may not exist for old jobs)
+src/modules/admin/job-control/job-control.service.ts:44:      const bullJobPaused = await this.workerService.pauseJob(jobId);
+src/modules/admin/job-control/job-control.service.ts:53:          status: 'paused',
+src/modules/admin/job-control/job-control.service.ts:54:          pausedAt: new Date(),
+src/modules/admin/job-control/job-control.service.ts:59:      await this.logJobAction(jobId, 'pause', userId);
+src/modules/admin/job-control/job-control.service.ts:61:      this.logger.log(`Job ${jobId} paused by user ${userId}`);
+src/modules/admin/job-control/job-control.service.ts:65:        message: `Job ${jobId} paused successfully`,
+src/modules/admin/job-control/job-control.service.ts:67:        action: 'pause',
+src/modules/admin/job-control/job-control.service.ts:73:        this.jobControlGateway.emitJobControlAction(jobId, 'pause', result);
+src/modules/admin/job-control/job-control.service.ts:78:      this.logger.error(`Failed to pause job ${jobId}:`, error);
+src/modules/admin/job-control/job-control.service.ts:83:  async resumeJob(jobId: string, userId: string): Promise<JobControlResult> {
+src/modules/admin/job-control/job-control.service.ts:93:      if (job.status !== 'paused') {
+src/modules/admin/job-control/job-control.service.ts:94:        throw new BadRequestException(`Job ${jobId} is not paused and cannot be resumed`);
+src/modules/admin/job-control/job-control.service.ts:97:      // Actually resume the BullMQ job
+src/modules/admin/job-control/job-control.service.ts:98:      const bullJobResumed = await this.workerService.resumeJob(jobId);
+src/modules/admin/job-control/job-control.service.ts:108:          pausedAt: null,
+src/modules/admin/job-control/job-control.service.ts:113:      await this.logJobAction(jobId, 'resume', userId);
+src/modules/admin/job-control/job-control.service.ts:115:      this.logger.log(`Job ${jobId} resumed by user ${userId}`);
+src/modules/admin/job-control/job-control.service.ts:119:        message: `Job ${jobId} resumed successfully`,
+src/modules/admin/job-control/job-control.service.ts:121:        action: 'resume',
+src/modules/admin/job-control/job-control.service.ts:125:      this.logger.error(`Failed to resume job ${jobId}:`, error);
+src/modules/admin/job-control/job-control.service.ts:130:  async cancelJob(jobId: string, userId: string): Promise<JobControlResult> {
+src/modules/admin/job-control/job-control.service.ts:140:      if (['completed', 'failed', 'cancelled'].includes(job.status)) {
+src/modules/admin/job-control/job-control.service.ts:141:        throw new BadRequestException(`Job ${jobId} is already ${job.status} and cannot be cancelled`);
+src/modules/admin/job-control/job-control.service.ts:144:      // Actually cancel the BullMQ job
+src/modules/admin/job-control/job-control.service.ts:145:      const bullJobCancelled = await this.workerService.cancelJob(jobId);
+src/modules/admin/job-control/job-control.service.ts:154:          status: 'cancelled',
+src/modules/admin/job-control/job-control.service.ts:155:          cancelledAt: new Date(),
+src/modules/admin/job-control/job-control.service.ts:160:      await this.logJobAction(jobId, 'cancel', userId);
+src/modules/admin/job-control/job-control.service.ts:162:      this.logger.log(`Job ${jobId} cancelled by user ${userId}`);
+src/modules/admin/job-control/job-control.service.ts:166:        message: `Job ${jobId} cancelled successfully`,
+src/modules/admin/job-control/job-control.service.ts:168:        action: 'cancel',
+src/modules/admin/job-control/job-control.service.ts:172:      this.logger.error(`Failed to cancel job ${jobId}:`, error);
+src/modules/admin/job-control/job-control.service.ts:233:      progress: job.progressPercentage,
+src/modules/admin/job-control/job-control.service.ts:252:      progressPercentage: job.progressPercentage,
+src/modules/admin/job-control/job-control.service.ts:418:        progress: job.progressPercentage,
+src/modules/admin/job-control/job-control.service.ts:419:        progressPercentage: job.progressPercentage,
+src/modules/admin/job-control/job-control.service.ts:472:        paused: stats.syncQueue?.paused || 0,
+src/modules/admin/job-control/job-control.service.ts:483:        paused: 0,
+src/modules/admin/job-control/job-control.service.ts:541:      // Don't update progress for cancelled or deleted jobs
+src/modules/admin/job-control/job-control.service.ts:542:      if (['cancelled', 'failed', 'completed'].includes(job.status)) {
+src/modules/admin/job-control/interfaces/job-control.interface.ts:11:  status: 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
+src/modules/admin/job-control/interfaces/job-control.interface.ts:87:  paused: number;
+src/modules/admin/job-control/interfaces/job-control.interface.ts:91:  action: 'pause' | 'resume' | 'cancel' | 'delete' | 'priority_change';
+src/modules/admin/admin.service.ts:939:        message: `Cache cleared successfully. ${totalCleared} keys removed.`,
+src/modules/finance/goldprice.utils.ts:14:  // Replace Bangla numerals if present and remove non-digit/decimal separators
+src/modules/finance/goldprice.parser.ts:45:        // Extract numeric price (remove BDT, commas, etc.)

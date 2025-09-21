@@ -426,3 +426,82 @@ model SyncJobAuditLog {
   @@index([performedAt])
   @@map("sync_job_audit_logs")
 }
+
+// API Monitoring Tables
+model ApiRequestLog {
+  id          Int      @id @default(autoincrement())
+  endpoint    String
+  method      String
+  statusCode  Int      @map("status_code")
+  latencyMs   Int      @map("latency_ms")
+  requestIp   String   @map("request_ip")
+  userAgent   String?  @map("user_agent")
+  timestamp   DateTime @default(now())
+  userId      Int?     @map("user_id")
+  metadata    Json?
+
+  @@index([endpoint])
+  @@index([requestIp])
+  @@index([timestamp])
+  @@index([statusCode])
+  @@map("api_request_logs")
+}
+
+model ApiEndpointStat {
+  id              Int      @id @default(autoincrement())
+  endpoint        String   @unique
+  method          String
+  requestCount    Int      @default(0) @map("request_count")
+  errorCount      Int      @default(0) @map("error_count")
+  avgLatencyMs    Float    @default(0) @map("avg_latency_ms")
+  lastUpdated     DateTime @default(now()) @map("last_updated")
+
+  @@index([endpoint])
+  @@map("api_endpoint_stats")
+}
+
+model ClientIpStat {
+  id            Int      @id @default(autoincrement())
+  ipAddress     String   @unique @map("ip_address")
+  requestCount  Int      @default(0) @map("request_count")
+  errorCount    Int      @default(0) @map("error_count")
+  lastRequest   DateTime @default(now()) @map("last_request")
+  blocked       Boolean  @default(false)
+  blockReason   String?  @map("block_reason")
+  blockedAt     DateTime? @map("blocked_at")
+  unblockedAt   DateTime? @map("unblocked_at")
+  geoIpInfo     Json?    @map("geo_ip_info")
+
+  @@index([blocked])
+  @@index([ipAddress])
+  @@map("client_ip_stats")
+}
+
+model RateLimitRule {
+  id            Int      @id @default(autoincrement())
+  endpoint      String   @unique
+  method        String?
+  limitCount    Int      @map("limit_count")
+  windowSeconds Int      @map("window_seconds")
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([endpoint])
+  @@map("rate_limit_rules")
+}
+
+model IpBlockingRule {
+  id         Int       @id @default(autoincrement())
+  ipAddress  String    @unique @map("ip_address")
+  reason     String?
+  blockedBy  String    @map("blocked_by")
+  blockedAt  DateTime  @default(now()) @map("blocked_at")
+  expiresAt  DateTime? @map("expires_at")
+  unblockedAt DateTime? @map("unblocked_at")
+  enabled    Boolean   @default(true)
+
+  @@index([enabled])
+  @@index([ipAddress])
+  @@map("ip_blocking_rules")
+}

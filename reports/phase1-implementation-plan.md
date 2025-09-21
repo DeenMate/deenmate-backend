@@ -280,7 +280,7 @@ export const jobControlApi = {
 ```typescript
 @WebSocketGateway({
   namespace: '/job-control',
-  cors: { origin: process.env.FRONTEND_URL || 'http://localhost:3001' }
+  cors: { origin: process.env.FRONTEND_URL || 'http://localhost:3000' }
 })
 export class JobControlGateway {
   @WebSocketServer()

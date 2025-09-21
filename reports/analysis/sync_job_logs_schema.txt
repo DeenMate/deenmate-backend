@@ -1,0 +1,22 @@
+                                             Table "public.sync_job_logs"
+      Column      |              Type              | Collation | Nullable |                  Default                  
+------------------+--------------------------------+-----------+----------+-------------------------------------------
+ id               | integer                        |           | not null | nextval('sync_job_logs_id_seq'::regclass)
+ jobName          | text                           |           | not null | 
+ resource         | text                           |           | not null | 
+ started_at       | timestamp(3) without time zone |           | not null | CURRENT_TIMESTAMP
+ finished_at      | timestamp(3) without time zone |           |          | 
+ status           | text                           |           | not null | 
+ error            | text                           |           |          | 
+ notes            | text                           |           |          | 
+ durationMs       | integer                        |           |          | 
+ recordsProcessed | integer                        |           |          | 
+ recordsFailed    | integer                        |           |          | 
+ retry_count      | integer                        |           | not null | 0
+ last_retry_at    | timestamp(3) without time zone |           |          | 
+Indexes:
+    "sync_job_logs_pkey" PRIMARY KEY, btree (id)
+    "sync_job_logs_jobName_status_idx" btree ("jobName", status)
+    "sync_job_logs_resource_idx" btree (resource)
+    "sync_job_logs_started_at_idx" btree (started_at)
+

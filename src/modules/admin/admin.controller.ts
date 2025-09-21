@@ -451,4 +451,18 @@ export class AdminController {
       data: madhabs,
     };
   }
+
+  @Get('jobs/:jobId')
+  @ApiOperation({ summary: 'Get job status by ID' })
+  @ApiResponse({ status: 200, description: 'Job status retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Job not found' })
+  async getJobStatus(@Param('jobId') jobId: string) {
+    const result = await this.adminService.getJobStatus(jobId);
+    
+    return {
+      success: result.success,
+      message: result.message,
+      data: result.data,
+    };
+  }
 }

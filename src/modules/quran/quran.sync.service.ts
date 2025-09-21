@@ -35,7 +35,7 @@ export class QuranSyncService {
     private readonly configService: ConfigService,
   ) {}
 
-  async syncChapters(options: QuranSyncOptions = {}): Promise<QuranSyncResult> {
+  async syncChapters(options: QuranSyncOptions = {}, isCancelled?: () => Promise<boolean>): Promise<QuranSyncResult> {
     const startTime = Date.now();
     const jobId = generateSyncJobId("quran-chapters", "chapters", new Date());
 
@@ -194,7 +194,7 @@ export class QuranSyncService {
     }
   }
 
-  async syncVerses(options: QuranSyncOptions = {}): Promise<QuranSyncResult> {
+  async syncVerses(options: QuranSyncOptions = {}, isCancelled?: () => Promise<boolean>): Promise<QuranSyncResult> {
     const startTime = Date.now();
     const jobId = generateSyncJobId("quran-verses", "verses", new Date());
 
@@ -230,6 +230,12 @@ export class QuranSyncService {
       const errors: string[] = [];
 
       for (const chapter of chapters) {
+        // Check for cancellation before processing each chapter
+        if (isCancelled && await isCancelled()) {
+          this.logger.log(`Quran verses sync cancelled at chapter ${chapter.chapterNumber}`);
+          throw new Error('Job cancelled by user');
+        }
+
         try {
           const responseBody = await this.httpService.get<any>(
             `${this.baseUrl}/verses/by_chapter/${chapter.chapterNumber}?language=en&translations=20,22,19&page=1&per_page=286&words=false&fields=text_uthmani,text_simple,text_indopak,text_imlaei,translations,audio,verse_key,verse_number&translation_fields=text,resource_id,language_name`,
@@ -610,6 +616,7 @@ export class QuranSyncService {
 
   async syncVerseTranslations(
     options: QuranSyncOptions & { chapterNumbers?: number[] } = {},
+    isCancelled?: () => Promise<boolean>
   ): Promise<QuranSyncResult> {
     const startTime = Date.now();
     const jobId = generateSyncJobId(
@@ -684,9 +691,54 @@ export class QuranSyncService {
       // Process verses in batches (reduced batch size to avoid rate limiting)
       const batchSize = 5;
       for (let i = 0; i < verses.length; i += batchSize) {
+        // Check for cancellation before processing each batch
+        if (isCancelled) {
+          try {
+            const cancelled = await isCancelled();
+            if (cancelled) {
+              this.logger.log(`Quran verse translations sync cancelled at batch ${i}/${verses.length}`);
+              throw new Error('Job cancelled by user');
+            }
+          } catch (error) {
+            // Re-throw pause errors as-is
+            if (error.message === 'Job paused by user') {
+              this.logger.log(`Quran verse translations sync paused at batch ${i}/${verses.length}`);
+              throw error;
+            }
+            // Re-throw cancellation errors as-is
+            if (error.message === 'Job cancelled by user') {
+              throw error;
+            }
+            // For other errors, log and continue
+            this.logger.warn(`Error checking cancellation status: ${error.message}`);
+          }
+        }
+
         const batch = verses.slice(i, i + batchSize);
         
         for (const verse of batch) {
+          // Check for cancellation before processing each verse
+          if (isCancelled) {
+            try {
+              const cancelled = await isCancelled();
+              if (cancelled) {
+                this.logger.log(`Quran verse translations sync cancelled at verse ${verse.chapterNumber}:${verse.verseNumber}`);
+                throw new Error('Job cancelled by user');
+              }
+            } catch (error) {
+              // Re-throw pause errors as-is
+              if (error.message === 'Job paused by user') {
+                this.logger.log(`Quran verse translations sync paused at verse ${verse.chapterNumber}:${verse.verseNumber}`);
+                throw error;
+              }
+              // Re-throw cancellation errors as-is
+              if (error.message === 'Job cancelled by user') {
+                throw error;
+              }
+              // For other errors, log and continue
+              this.logger.warn(`Error checking cancellation status: ${error.message}`);
+            }
+          }
           try {
             // Add delay between API calls to avoid rate limiting
             if (i > 0) {

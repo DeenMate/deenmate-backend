@@ -325,122 +325,63 @@ export class AdminService {
     }
   }
 
-  async triggerQuranSync(): Promise<{ success: boolean; message: string }> {
+  async triggerQuranSync(): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      // Create job control entry
-      const jobId = `quran-sync-${Date.now()}`;
-      await this.jobControlService.createOrUpdateJobControl(
-        jobId,
-        'quran',
-        'Quran Data Sync',
-        'running',
-        { startedBy: 'admin', timestamp: new Date().toISOString() }
-      );
+      // Create sync job
+      const syncJob = {
+        type: 'quran' as const,
+        action: 'sync' as const,
+        data: { force: true },
+        priority: 1, // High priority for manual sync
+      };
 
-      // Step 1: Sync chapters (15% of total progress)
-      await this.jobControlService.updateJobProgress(jobId, 5, 'Starting Quran sync...');
-      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for visibility
-      await this.jobControlService.updateJobProgress(jobId, 10, 'Syncing chapters...');
-      const chaptersResult = await this.quranSync.syncChapters();
-      await this.jobControlService.updateJobProgress(jobId, 15, 'Chapters synced successfully');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Step 2: Sync verses (40% of total progress - this is the longest step)
-      await this.jobControlService.updateJobProgress(jobId, 20, 'Syncing verses...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const versesResult = await this.quranSync.syncVerses();
-      await this.jobControlService.updateJobProgress(jobId, 55, 'Verses synced successfully');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Step 3: Sync translation resources (15% of total progress)
-      await this.jobControlService.updateJobProgress(jobId, 60, 'Syncing translation resources...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const translationsResult = await this.quranSync.syncTranslationResources();
-      await this.jobControlService.updateJobProgress(jobId, 75, 'Translation resources synced successfully');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Step 4: Sync verse translations (20% of total progress - this can be slow due to API calls)
-      await this.jobControlService.updateJobProgress(jobId, 80, 'Syncing verse translations...');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Longer delay before the longest step
-      const verseTranslationsResult = await this.quranSync.syncVerseTranslations();
-      await this.jobControlService.updateJobProgress(jobId, 95, 'Verse translations synced successfully');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Mark as completed
-      await this.jobControlService.updateJobProgress(jobId, 100, 'Quran sync completed successfully');
-      await this.jobControlService.createOrUpdateJobControl(
-        jobId,
-        'quran',
-        'Quran Data Sync',
-        'completed',
-        { 
-          completedAt: new Date().toISOString(),
-          chaptersProcessed: chaptersResult?.recordsProcessed || 0,
-          versesProcessed: versesResult?.recordsProcessed || 0,
-          translationsProcessed: translationsResult?.recordsProcessed || 0,
-          verseTranslationsProcessed: verseTranslationsResult?.recordsProcessed || 0
-        }
-      );
-
-      return { success: true, message: "Quran sync triggered successfully" };
+      // Add job to queue
+      const job = await this.workerService.addSyncJob(syncJob);
+      
+      this.logger.log(`Quran sync job queued with ID: ${job.id}`);
+      
+      return {
+        success: true,
+        message: "Quran sync queued successfully",
+        data: {
+          module: "quran",
+          jobId: job.id?.toString(),
+          status: "ENQUEUED",
+        },
+      };
     } catch (error) {
       this.logger.error("Failed to trigger Quran sync", error.stack);
-      
-      // Mark job as failed
-      const jobId = `quran-sync-${Date.now()}`;
-      await this.jobControlService.createOrUpdateJobControl(
-        jobId,
-        'quran',
-        'Quran Data Sync',
-        'failed',
-        { 
-          error: error.message,
-          failedAt: new Date().toISOString()
-        }
-      );
-
-      return { success: false, message: `Quran sync failed: ${error.message}` };
+      return {
+        success: false,
+        message: `Quran sync failed: ${error.message}`,
+      };
     }
   }
 
-  async triggerPrayerSync(): Promise<{ success: boolean; message: string }> {
+  async triggerPrayerSync(): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      // Create job control entry
-      const jobId = `prayer-sync-${Date.now()}`;
-      await this.jobControlService.createOrUpdateJobControl(
-        jobId,
-        'prayer',
-        'Prayer Times Sync',
-        'running',
-        { startedBy: 'admin', timestamp: new Date().toISOString() }
-      );
+      // Create sync job
+      const syncJob = {
+        type: 'prayer' as const,
+        action: 'sync' as const,
+        data: { force: true },
+        priority: 2, // Medium priority for prayer sync
+      };
 
-      // Update progress
-      await this.jobControlService.updateJobProgress(jobId, 10, 'Starting prayer prewarm...');
+      // Add job to queue
+      const job = await this.workerService.addSyncJob(syncJob);
       
-      // Change behavior: When dashboard requests Prayer sync, run 1-day prewarm for all cities/methods/madhabs
-      const res = await this.prayerSync.prewarmAllLocations(1);
+      this.logger.log(`Prayer sync job queued with ID: ${job.id}`);
       
-      if (res.success) {
-        await this.jobControlService.updateJobProgress(jobId, 100, 'Prayer prewarm completed');
-        await this.jobControlService.createOrUpdateJobControl(
-          jobId,
-          'prayer',
-          'Prayer Times Sync',
-          'completed',
-          { completedAt: new Date().toISOString() }
-        );
-        return { success: true, message: "Prayer prewarm (today) triggered successfully" };
-      } else {
-        await this.jobControlService.createOrUpdateJobControl(
-          jobId,
-          'prayer',
-          'Prayer Times Sync',
-          'failed',
-          { errorMessage: 'Prayer prewarm failed', completedAt: new Date().toISOString() }
-        );
-        return { success: false, message: "Prayer prewarm failed" };
-      }
+      return {
+        success: true,
+        message: "Prayer sync queued successfully",
+        data: {
+          module: "prayer",
+          jobId: job.id?.toString(),
+          status: "ENQUEUED",
+        },
+      };
     } catch (error) {
       this.logger.error("Failed to trigger Prayer sync", error.stack);
       return {
@@ -754,7 +695,7 @@ export class AdminService {
 
   async triggerHadithSync(
     collectionName?: string,
-  ): Promise<{ success: boolean; message: string; jobId?: string }> {
+  ): Promise<{ success: boolean; message: string; jobId?: string; status?: string }> {
     try {
       // Create sync job
       const syncJob = {
@@ -775,6 +716,7 @@ export class AdminService {
           ? `Hadith sync for ${collectionName} queued successfully`
           : "Hadith sync for all collections queued successfully",
         jobId: job.id?.toString(),
+        status: "ENQUEUED",
       };
     } catch (error) {
       this.logger.error("Failed to trigger Hadith sync", error.stack);
@@ -890,53 +832,33 @@ export class AdminService {
   async triggerGoldPriceUpdate(): Promise<{
     success: boolean;
     message: string;
+    data?: any;
   }> {
     try {
-      // Create job control entry
-      const jobId = `gold-price-sync-${Date.now()}`;
-      await this.jobControlService.createOrUpdateJobControl(
-        jobId,
-        'finance',
-        'Gold Price Update',
-        'running',
-        { startedBy: 'admin', timestamp: new Date().toISOString() }
-      );
+      // Create sync job
+      const syncJob = {
+        type: 'finance' as const,
+        action: 'sync' as const,
+        data: { force: true },
+        priority: 3, // Lower priority for gold price updates
+      };
 
-      // Update progress
-      await this.jobControlService.updateJobProgress(jobId, 50, 'Fetching gold prices...');
-      const result = await this.goldPriceService.fetchAndStore();
-
-      // Mark as completed
-      await this.jobControlService.updateJobProgress(jobId, 100, 'Gold price update completed');
-      await this.jobControlService.createOrUpdateJobControl(
-        jobId,
-        'finance',
-        'Gold Price Update',
-        'completed',
-        { completedAt: new Date().toISOString(), recordsInserted: result.inserted }
-      );
-
+      // Add job to queue
+      const job = await this.workerService.addSyncJob(syncJob);
+      
+      this.logger.log(`Gold price sync job queued with ID: ${job.id}`);
+      
       return {
         success: true,
-        message: `Gold price update triggered successfully. ${result.inserted} records inserted.`,
+        message: "Gold price sync queued successfully",
+        data: {
+          module: "finance",
+          jobId: job.id?.toString(),
+          status: "ENQUEUED",
+        },
       };
     } catch (error) {
       this.logger.error("Failed to trigger Gold price update", error.stack);
-      
-      // Mark as failed
-      try {
-        const jobId = `gold-price-sync-${Date.now()}`;
-        await this.jobControlService.createOrUpdateJobControl(
-          jobId,
-          'finance',
-          'Gold Price Update',
-          'failed',
-          { errorMessage: error.message, completedAt: new Date().toISOString() }
-        );
-      } catch (jobError) {
-        this.logger.error("Failed to update job status", jobError);
-      }
-      
       return {
         success: false,
         message: `Gold price update failed: ${error.message}`,
@@ -947,6 +869,7 @@ export class AdminService {
   async triggerModuleSync(module: string): Promise<{
     success: boolean;
     message: string;
+    data?: any;
   }> {
     try {
       switch (module.toLowerCase()) {
@@ -1039,5 +962,29 @@ export class AdminService {
       orderBy: { methodName: 'asc' },
     });
     return methods;
+  }
+
+  async getJobStatus(jobId: string): Promise<{ success: boolean; data?: any; message?: string }> {
+    try {
+      const jobStatus = await this.workerService.getJobStatus(jobId);
+      
+      if (!jobStatus) {
+        return {
+          success: false,
+          message: `Job with ID ${jobId} not found`,
+        };
+      }
+
+      return {
+        success: true,
+        data: jobStatus,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get job status for ${jobId}`, error.stack);
+      return {
+        success: false,
+        message: `Failed to get job status: ${error.message}`,
+      };
+    }
   }
 }

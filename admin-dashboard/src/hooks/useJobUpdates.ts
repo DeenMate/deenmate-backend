@@ -134,17 +134,7 @@ export function useJobUpdates() {
       // Unsubscribe from all jobs
       unsubscribeFromAllJobs();
     };
-  }, [
-    isConnected,
-    on,
-    off,
-    handleJobStatusUpdate,
-    handleJobProgressUpdate,
-    handleJobControlAction,
-    handleQueueStatusUpdate,
-    subscribeToAllJobs,
-    unsubscribeFromAllJobs,
-  ]);
+  }, [isConnected]); // Simplified dependency array to prevent frequent reconnections
 
   return {
     isConnected,
